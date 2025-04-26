@@ -23,9 +23,11 @@ export const users = pgTable("users", {
 
 // Credits Balance model
 export const creditsBalances = pgTable("credits_balances", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  amount: integer("amount").notNull().default(0),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).primaryKey(),
+  currentBalance: integer("current_balance").notNull().default(0),
+  monthlyAllotment: integer("monthly_allotment").notNull().default(0),
+  rolloverEnabled: boolean("rollover_enabled").default(false).notNull(),
+  rolloverExpiry: timestamp("rollover_expiry"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -34,8 +36,8 @@ export const creditsTransactions = pgTable("credits_transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(),
-  description: text("description").notNull(),
-  balanceAfter: integer("balance_after").notNull(),
+  type: text("type").notNull(),
+  metadata: text("metadata").default("{}"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -61,7 +63,6 @@ export const insertUserSchema = createInsertSchema(users)
   });
 
 export const insertCreditsBalanceSchema = createInsertSchema(creditsBalances).omit({
-  id: true,
   updatedAt: true,
 });
 

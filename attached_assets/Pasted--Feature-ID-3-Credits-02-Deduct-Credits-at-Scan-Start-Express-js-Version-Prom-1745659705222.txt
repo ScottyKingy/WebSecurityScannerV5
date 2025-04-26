@@ -1,0 +1,108 @@
+### 🧱 Feature ID 3: Credits-02 – Deduct Credits at Scan Start (Express.js Version)
+
+---
+
+### ✅ Prompt 3.1 — Deduct Credits at Scan Start
+
+Create or update:
+- `/server/routes/scan.ts`
+- `/server/lib/credits.ts`
+- `/server/lib/scanQueue.ts`
+- Prisma model: `Scan`
+
+Schema for Scan Table (add to Prisma schema):
+```prisma
+model Scan {
+  id         String   @id @default(uuid())
+  userId     String
+  primaryUrl String
+  competitors String[]
+  status     String   // queued | running | complete | failed
+  createdAt  DateTime @default(now())
+  creditsUsed Int
+  scanType   String   // single | multi | competitor
+  source     String   // web | api | scheduled
+  user       User     @relation(fields: [userId], references: [id])
+}
+```
+
+---
+
+### ✅ Endpoint: POST `/api/scan/start`
+
+Request Body:
+```json
+{
+  "targetUrl": "https://example.com",
+  "competitors": ["https://competitor1.com"]
+}
+```
+
+Logic:
+1. ✅ Use `requireAuth` middleware
+2. ✅ Validate all URLs (basic domain structure, `https://`, no JS injection)
+3. ✅ Count total cost = 1 + number of competitors
+4. ✅ Call `chargeCredits(user.id, total_cost, "scan", metadata)`
+5. ✅ Store scan metadata to `Scan` table
+6. ✅ Call `queueScanTask(scan.id, allDomains[])`
+7. ✅ Return response:
+```json
+{
+  "scanId": "uuid",
+  "status": "queued",
+  "creditsCharged": 2
+}
+```
+
+Error Handling:
+- If credit check fails → return 403 with `"Insufficient credits"`
+- If scan queuing fails after charge → call `refundCredits()`
+- All scan actions must be logged with user ID and IP
+
+---
+
+### ✅ Prompt 3.2 — Frontend Scan Wizard Credit Logic (Client)
+
+Component: `/client/components/ScanWizard.tsx`
+
+Requirements:
+- Show credit calculator: "Estimated Cost: 1 + X competitors = Y credits"
+- Use `useCreditBalance()` to pull current balance from `/api/credits/balance`
+- Use `useUserTier()` to determine if competitor input is allowed
+- Disable submit if `balance < totalCost`
+- Tooltip: "Each domain scanned costs 1 credit."
+
+On Submit:
+- POST to `/api/scan/start`
+- If success → redirect to `/scan-details?url=<target>`
+- If 403 → show "Insufficient credits" toast
+- If 500 → show "Scan failed" toast
+
+---
+
+### ✅ Prompt 3.3 — Scan Queue Task Stub
+
+Create `/server/lib/scanQueue.ts`:
+```ts
+export async function queueScanTask(scanId: string, domains: string[]): Promise<string> {
+  console.log(`[queue] Queuing scan ${scanId} for:`, domains);
+  // Add actual BullMQ or worker logic later
+  return "queued-task-id-mock";
+}
+```
+
+Called inside `POST /api/scan/start` route.
+
+Future:
+- Replace stub with BullMQ task that:
+  - Calls OpenAI
+  - Runs accessibility or SEO checks
+  - Writes results to `scan_results` table
+
+---
+
+### ✅ Additional Notes
+- Add `requireTier("lite")` for minimum scan access
+- Add `requireTier("ultimate")` for competitor scan field
+- Ensure scan cost is calculated **before** queuing begins
+- Show total credits deducted clearly in dashboard logs and UI
