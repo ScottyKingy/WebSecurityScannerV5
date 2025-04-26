@@ -1,0 +1,14 @@
+{
+  "scannerKey": "performance",
+  "name": "Performance Scanner",
+  "description": "Analyzes website performance metrics including loading speed, resource usage, and Core Web Vitals",
+  "enabled": true,
+  "creditCost": 1,
+  "settings": {
+    "throttling": true,
+    "deviceEmulation": "mobile",
+    "captureScreenshots": true,
+    "maxUrlsPerScan": 20
+  },
+  "version": "1.0.0"
+}

@@ -83,16 +83,20 @@ export const scans = pgTable("scans", {
   primaryUrl: text("primary_url").notNull(),
   competitors: text("competitors").array().notNull(),
   status: text("status").notNull(), // queued | running | complete | failed
-  creditsUsed: integer("credits_used").notNull(),
   scanType: text("scan_type").notNull(), // single | multi | competitor
+  creditsUsed: integer("credits_used").notNull(),
   source: text("source").notNull(), // web | api | scheduled
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  taskId: text("task_id"),
+  scannerKeys: text("scanner_keys").array(),
 });
 
 // Insert schema for scans
 export const insertScanSchema = createInsertSchema(scans).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 // Types

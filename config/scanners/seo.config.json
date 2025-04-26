@@ -1,0 +1,16 @@
+{
+  "scannerKey": "seo",
+  "name": "SEO Scanner",
+  "description": "Analyzes website SEO factors including meta tags, headings, and content structure",
+  "enabled": true,
+  "creditCost": 1,
+  "settings": {
+    "checkMetaTags": true,
+    "checkHeadings": true,
+    "checkImageAlt": true,
+    "checkLinks": true,
+    "checkKeywordDensity": true,
+    "maxUrlsPerScan": 20
+  },
+  "version": "1.0.0"
+}

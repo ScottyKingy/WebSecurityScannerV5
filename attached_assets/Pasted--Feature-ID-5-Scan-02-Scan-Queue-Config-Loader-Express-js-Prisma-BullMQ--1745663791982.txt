@@ -1,0 +1,126 @@
+### 🧱 Feature ID 5: Scan-02 – Scan Queue + Config Loader (Express.js + Prisma + BullMQ)
+
+---
+
+### ✅ Prompt 5.1 — Scan Metadata Schema (Prisma)
+
+Add to `/prisma/schema.prisma`:
+```prisma
+model Scan {
+  id          String   @id @default(uuid())
+  userId      String
+  primaryUrl  String
+  competitors String[]
+  status      String   // queued | running | complete | failed
+  type        String   // single | multi | competitor
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  taskId      String?  // BullMQ job ID
+  scannerKeys String[]
+  creditsUsed Int
+  source      String   // web | api | schedule
+  user        User     @relation(fields: [userId], references: [id])
+}
+```
+
+---
+
+### ✅ Prompt 5.2 — Scan Queue API Endpoint (POST /api/scan/queue)
+
+Add to `/server/routes/scan.ts`:
+```ts
+router.post("/queue", requireAuth, async (req, res) => {
+  const { targetUrl, competitors } = req.body;
+  const allDomains = [targetUrl, ...(competitors || [])];
+
+  const scan = await prisma.scan.create({
+    data: {
+      userId: req.user.id,
+      primaryUrl: targetUrl,
+      competitors,
+      status: "queued",
+      type: competitors?.length ? "competitor" : "single",
+      creditsUsed: allDomains.length,
+      source: "web",
+      scannerKeys: getEnabledScanners(),
+    }
+  });
+
+  const taskId = await queueScanTask(scan.id, allDomains);
+  await prisma.scan.update({ where: { id: scan.id }, data: { taskId } });
+
+  res.json({ scanId: scan.id, taskId, status: "queued" });
+});
+```
+
+---
+
+### ✅ Prompt 5.3 — `getEnabledScanners()` and Config Loader
+
+Create `/server/lib/scannerConfig.ts`:
+```ts
+import fs from 'fs';
+import path from 'path';
+
+export function loadScannerConfig(key: string): any {
+  const file = path.resolve("config/scanners", `${key}.config.json`);
+  const data = fs.readFileSync(file, "utf-8");
+  return JSON.parse(data);
+}
+
+export function getEnabledScanners(): string[] {
+  const dir = path.resolve("config/scanners");
+  return fs.readdirSync(dir)
+    .filter(f => f.endsWith(".json"))
+    .map(f => loadScannerConfig(f.replace(".config.json", "")))
+    .filter(cfg => cfg.enabled)
+    .map(cfg => cfg.scannerKey);
+}
+```
+
+---
+
+### ✅ Prompt 5.4 — Scan Queue Task Stub (BullMQ)
+
+Create `/server/lib/scanQueue.ts`:
+```ts
+import { Queue } from 'bullmq';
+
+const scanQueue = new Queue("scan-jobs", {
+  connection: { host: 'localhost', port: 6379 }
+});
+
+export async function queueScanTask(scanId: string, domains: string[]): Promise<string> {
+  const job = await scanQueue.add("runScan", { scanId, domains });
+  return job.id;
+}
+```
+
+---
+
+### ✅ Prompt 5.5 — Scan Status Endpoint
+
+Create `/server/routes/scanStatus.ts`:
+```ts
+router.get("/status/:scanId", requireAuth, async (req, res) => {
+  const scan = await prisma.scan.findUnique({ where: { id: req.params.scanId } });
+  if (!scan || scan.userId !== req.user.id) {
+    return res.status(404).json({ error: "Scan not found" });
+  }
+  res.json({
+    status: scan.status,
+    taskId: scan.taskId,
+    startedAt: scan.createdAt,
+    updatedAt: scan.updatedAt,
+    completed: scan.status === "complete"
+  });
+});
+```
+
+---
+
+### ✅ Developer Notes
+- Scan worker will be implemented in Feature ID 6
+- Scanner configs can be edited live in `/config/scanners/*.config.json`
+- Logs should include `scanId`, `domains`, `taskId`, and `scannerKeys`
+- Future: Add audit trail of scan queue success/fail in `scan_logs` table

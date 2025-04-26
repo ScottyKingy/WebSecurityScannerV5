@@ -1,0 +1,15 @@
+{
+  "scannerKey": "security",
+  "name": "Security Scanner",
+  "description": "Analyzes website security factors including HTTPS, headers, and common vulnerabilities",
+  "enabled": true,
+  "creditCost": 2,
+  "settings": {
+    "checkHttps": true,
+    "checkHeaders": true,
+    "checkCookies": true,
+    "checkVulnerabilities": true,
+    "maxUrlsPerScan": 10
+  },
+  "version": "1.0.0"
+}
