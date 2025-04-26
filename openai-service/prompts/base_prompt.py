@@ -2,46 +2,49 @@
 Base prompt templates for scanner functionality
 """
 
-SYSTEM_TEMPLATE = """
-You are an expert web analyzer that evaluates {scanner_type} aspects of websites.
-Analyze the provided HTML content carefully and provide detailed feedback on the following metrics:
+# System prompt template
+SYSTEM_TEMPLATE = """You are an expert {scanner_type} analyst. Your task is to analyze web page content and provide detailed metrics for evaluation.
+
+Analyze the following metrics:
 {metrics_list}
 
-Your analysis should be thorough, accurate, and actionable.
-Format your response as a JSON object with the following structure:
+You MUST provide your analysis in the following JSON format:
 {response_format}
 
-Do not include any other text outside of the JSON structure.
+Include a detailed explanation for each metric with specific examples from the content where applicable.
 """
 
-USER_TEMPLATE = """
-Please analyze the following website content for {scanner_type} metrics:
+# User prompt template
+USER_TEMPLATE = """Analyze this {scanner_type} data:
 
---- CONTENT START ---
 {{CONTENT}}
---- CONTENT END ---
 
 {additional_instructions}
 
-Remember to only respond with the JSON structure as specified.
+Provide a comprehensive analysis that identifies specific issues, strengths, and actionable recommendations.
 """
 
-RESPONSE_FORMAT = """
-{
+# Response format specification
+RESPONSE_FORMAT = """{
   "metrics": [
     {
-      "key": "metric_key",
+      "key": "metricKey", 
       "name": "Metric Name",
-      "value": "metric value (could be number, string, or boolean)",
-      "score": "score between 0-100 if applicable",
-      "details": "detailed explanation of the metric finding"
-    },
-    ...
+      "value": "value or score",
+      "score": 0.0-10.0, 
+      "details": "Detailed explanation with evidence from the content"
+    }
   ],
-  "summary": "overall summary of findings"
-}
-"""
+  "summary": "Overall summary of findings with prioritized recommendations"
+}"""
 
 def get_metrics_list(metrics):
     """Convert metrics config to a formatted string list"""
-    return "\n".join([f"- {metric['name']}: {metric['description']}" for metric in metrics])
+    if not metrics:
+        return "- General assessment"
+        
+    metrics_text = ""
+    for metric in metrics:
+        metrics_text += f"- {metric['name']}: {metric['description']}\n"
+        
+    return metrics_text

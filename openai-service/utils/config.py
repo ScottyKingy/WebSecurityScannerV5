@@ -1,9 +1,13 @@
 """
 Scanner configuration loader
 """
-import json
 import os
-from typing import Dict, Any, Optional
+import json
+import glob
+from typing import Dict, Any, List
+
+# Default scanner config directory
+CONFIG_PATH = os.getenv("CONFIG_PATH", "config/scanners")
 
 def load_scanner_config(key: str) -> Dict[str, Any]:
     """
@@ -19,22 +23,29 @@ def load_scanner_config(key: str) -> Dict[str, Any]:
         FileNotFoundError: If the scanner config file doesn't exist
         json.JSONDecodeError: If the config file contains invalid JSON
     """
-    base_path = os.getenv("CONFIG_PATH", "config/scanners")
-    path = os.path.join(base_path, f"{key}.config.json")
+    config_file = f"{CONFIG_PATH}/{key}.config.json"
+    
+    if not os.path.exists(config_file):
+        raise FileNotFoundError(f"Scanner configuration not found: {key}")
     
     try:
-        with open(path, "r") as f:
+        with open(config_file, 'r') as f:
             config = json.load(f)
             
-        # Ensure the config has the required fields
-        if "scannerKey" not in config or config["scannerKey"] != key:
-            raise ValueError(f"Invalid scanner configuration: scannerKey mismatch or missing for {key}")
+        # Validate required fields
+        required_fields = ["scannerKey", "name", "metrics"]
+        for field in required_fields:
+            if field not in config:
+                raise ValueError(f"Scanner config missing required field: {field}")
+        
+        # Ensure scanner is enabled
+        if not config.get("enabled", True):
+            raise ValueError(f"Scanner {key} is disabled")
             
         return config
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Scanner configuration not found for key: {key}")
-    except json.JSONDecodeError:
-        raise ValueError(f"Invalid JSON in scanner configuration for key: {key}")
+        
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Invalid JSON in scanner config {key}: {str(e)}", e.doc, e.pos)
 
 def get_enabled_scanners() -> list:
     """
@@ -43,24 +54,26 @@ def get_enabled_scanners() -> list:
     Returns:
         List of enabled scanner keys
     """
-    base_path = os.getenv("CONFIG_PATH", "config/scanners")
+    scanner_keys = []
     
-    if not os.path.exists(base_path):
-        return []
-        
-    scanner_files = [
-        f for f in os.listdir(base_path)
-        if f.endswith(".config.json")
-    ]
+    # Get all .config.json files in the scanners directory
+    config_files = glob.glob(f"{CONFIG_PATH}/*.config.json")
     
-    enabled_scanners = []
-    for file in scanner_files:
+    for file_path in config_files:
         try:
-            key = file.replace(".config.json", "")
-            config = load_scanner_config(key)
-            if config.get("enabled", False):
-                enabled_scanners.append(key)
-        except Exception as e:
-            print(f"Error loading scanner config {file}: {str(e)}")
+            # Extract scanner key from filename
+            file_name = os.path.basename(file_path)
+            scanner_key = file_name.replace(".config.json", "")
             
-    return enabled_scanners
+            # Load config and check if enabled
+            with open(file_path, 'r') as f:
+                config = json.load(f)
+                
+            if config.get("enabled", True):
+                scanner_keys.append(scanner_key)
+                
+        except Exception as e:
+            print(f"Error loading scanner config {file_path}: {str(e)}")
+            continue
+            
+    return scanner_keys

@@ -1,0 +1,66 @@
+{
+  "scannerKey": "seo",
+  "name": "SEO Scanner",
+  "description": "Analyzes search engine optimization factors like metadata, content quality, and keyword usage",
+  "version": "1.0.0",
+  "enabled": true,
+  "creditsPerScan": 2,
+  "tierAccess": ["deep", "ultimate", "enterprise"],
+  "model": "gpt-4o",
+  "tokenLimit": 4096,
+  "prompt": {
+    "system": "You are an expert SEO analyst. Evaluate the provided HTML content for search engine optimization factors. Focus on meta tags, content quality, heading structure, keyword usage, internal linking, and other SEO best practices. Provide detailed feedback on each metric and actionable recommendations.",
+    "user": "Perform a comprehensive SEO analysis on this website HTML:\n\n{{CONTENT}}\n\nIdentify strengths, weaknesses, and specific optimization opportunities to improve search engine rankings."
+  },
+  "metrics": [
+    {
+      "key": "titleTag",
+      "name": "Title Tag",
+      "description": "Analysis of page title effectiveness",
+      "unit": "score"
+    },
+    {
+      "key": "metaDescription",
+      "name": "Meta Description",
+      "description": "Evaluation of meta description quality",
+      "unit": "score"
+    },
+    {
+      "key": "headingStructure",
+      "name": "Heading Structure",
+      "description": "Assessment of H1-H6 tags usage",
+      "unit": "score"
+    },
+    {
+      "key": "contentQuality",
+      "name": "Content Quality",
+      "description": "Evaluation of content relevance and quality",
+      "unit": "score"
+    },
+    {
+      "key": "keywordUsage",
+      "name": "Keyword Usage",
+      "description": "Analysis of keyword presence and distribution",
+      "unit": "score"
+    },
+    {
+      "key": "internalLinking",
+      "name": "Internal Linking",
+      "description": "Assessment of internal link structure",
+      "unit": "score"
+    },
+    {
+      "key": "imageOptimization",
+      "name": "Image SEO",
+      "description": "Evaluation of image alt tags and attributes",
+      "unit": "score"
+    },
+    {
+      "key": "overallSeoScore",
+      "name": "Overall SEO Score",
+      "description": "Composite score based on all SEO factors",
+      "unit": "score"
+    }
+  ],
+  "processingTimeEstimate": 60
+}

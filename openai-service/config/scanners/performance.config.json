@@ -1,0 +1,48 @@
+{
+  "scannerKey": "performance",
+  "name": "Performance Scanner",
+  "description": "Analyzes website performance metrics including load time, page size, and rendering performance",
+  "version": "1.0.0",
+  "enabled": true,
+  "creditsPerScan": 1,
+  "tierAccess": ["lite", "deep", "ultimate", "enterprise"],
+  "model": "gpt-4o",
+  "tokenLimit": 2048,
+  "prompt": {
+    "system": "You are an expert web performance analyst. Analyze the provided HTML content to identify performance issues and optimization opportunities. Your analysis should focus on core web vitals, render-blocking resources, image optimization, and overall performance best practices.",
+    "user": "Analyze this website HTML for performance issues:\n\n{{CONTENT}}\n\nIdentify specific performance bottlenecks and provide actionable recommendations to improve page load speed."
+  },
+  "metrics": [
+    {
+      "key": "pageLoadTime",
+      "name": "Page Load Time Estimate",
+      "description": "Estimated page load time based on resource count and size",
+      "unit": "seconds"
+    },
+    {
+      "key": "resourceCount",
+      "name": "Resource Count",
+      "description": "Number of external resources loaded by the page",
+      "unit": "count"
+    },
+    {
+      "key": "renderBlockingCount",
+      "name": "Render Blocking Resources",
+      "description": "Count of resources that block page rendering",
+      "unit": "count"
+    },
+    {
+      "key": "imageOptimization",
+      "name": "Image Optimization",
+      "description": "Analysis of image usage and optimization",
+      "unit": "score"
+    },
+    {
+      "key": "performanceScore",
+      "name": "Overall Performance Score",
+      "description": "Estimated performance score based on all metrics",
+      "unit": "score"
+    }
+  ],
+  "processingTimeEstimate": 30
+}

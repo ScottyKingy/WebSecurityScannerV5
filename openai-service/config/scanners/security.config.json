@@ -1,0 +1,66 @@
+{
+  "scannerKey": "security",
+  "name": "Security Scanner",
+  "description": "Analyzes website security posture including headers, vulnerabilities, and data protection",
+  "version": "1.0.0",
+  "enabled": true,
+  "creditsPerScan": 3,
+  "tierAccess": ["ultimate", "enterprise"],
+  "model": "gpt-4o",
+  "tokenLimit": 6144,
+  "prompt": {
+    "system": "You are an expert web security analyst. Examine the provided HTML content for security vulnerabilities, issues with HTTP headers, potential data exposure, and other security risks. Provide detailed security assessment for each metric and recommend specific fixes to improve the website's security posture.",
+    "user": "Perform a comprehensive security analysis on this website HTML:\n\n{{CONTENT}}\n\nIdentify security vulnerabilities, weaknesses, and provide detailed recommendations to fix each issue."
+  },
+  "metrics": [
+    {
+      "key": "headerSecurity",
+      "name": "HTTP Headers",
+      "description": "Analysis of security-related HTTP headers",
+      "unit": "score"
+    },
+    {
+      "key": "contentSecurityPolicy",
+      "name": "Content Security Policy",
+      "description": "Evaluation of CSP implementation",
+      "unit": "score"
+    },
+    {
+      "key": "xssVulnerabilities",
+      "name": "XSS Vulnerabilities",
+      "description": "Detection of cross-site scripting vulnerabilities",
+      "unit": "count"
+    },
+    {
+      "key": "insecureLinks",
+      "name": "Insecure Links",
+      "description": "Detection of HTTP links in HTTPS page",
+      "unit": "count"
+    },
+    {
+      "key": "informationExposure",
+      "name": "Information Exposure",
+      "description": "Assessment of sensitive information exposure",
+      "unit": "score"
+    },
+    {
+      "key": "outdatedLibraries",
+      "name": "Outdated Libraries",
+      "description": "Detection of potentially vulnerable libraries",
+      "unit": "count"
+    },
+    {
+      "key": "formSecurity",
+      "name": "Form Security",
+      "description": "Analysis of form implementation security",
+      "unit": "score"
+    },
+    {
+      "key": "overallSecurityScore",
+      "name": "Overall Security Score",
+      "description": "Composite score based on all security factors",
+      "unit": "score"
+    }
+  ],
+  "processingTimeEstimate": 120
+}

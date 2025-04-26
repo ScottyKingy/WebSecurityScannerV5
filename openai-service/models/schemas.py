@@ -1,5 +1,8 @@
+"""
+Pydantic models for request and response schemas
+"""
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
-from typing import Dict, Any, Optional, List
 
 class PromptRequest(BaseModel):
     """Request model for the OpenAI prompt endpoint"""
@@ -22,7 +25,7 @@ class OpenAIResponse(BaseModel):
     summary: str
     raw_response: Optional[str] = None
     tokens_used: Optional[int] = None
-    
+
 class TokenUsage(BaseModel):
     """Model for tracking token usage"""
     prompt_tokens: int
