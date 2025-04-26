@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, BrainCircuit } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, Send, Loader2 } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface AskAIButtonProps {
@@ -18,100 +20,87 @@ interface AskAIButtonProps {
 }
 
 export function AskAIButton({ scanId, scannerKey }: AskAIButtonProps) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
-    if (!question.trim()) {
-      toast({
-        title: 'Please enter a question',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!question.trim()) return;
     
-    setLoading(true);
+    setIsLoading(true);
     setAnswer('');
     
     try {
-      const response = await fetch('/api/ask-ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scanId,
-          scannerKey,
-          question,
-        }),
+      const response = await apiRequest('POST', `/api/ai-answer`, {
+        scanId,
+        scannerKey,
+        question: question.trim()
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get response from AI');
-      }
       
       const data = await response.json();
       setAnswer(data.answer);
     } catch (error) {
-      console.error('Error asking AI:', error);
       toast({
         title: 'Error',
-        description: 'Failed to get a response. Please try again later.',
+        description: 'Failed to get an answer. Please try again.',
         variant: 'destructive',
       });
+      console.error('Error asking AI:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
-  
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <BrainCircuit size={16} />
-          Ask AI
+        <Button variant="secondary" size="sm" className="h-8">
+          <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+          <span>Ask AI</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Ask AI about this report</DialogTitle>
+          <DialogTitle>Ask AI About This Scan</DialogTitle>
           <DialogDescription>
-            Ask a question about the scan results and our AI will provide insights.
+            Ask for clarification on scan results or recommendations for {scannerKey}
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <Textarea
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Textarea 
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="E.g., What are the key issues affecting my score?"
-            className="min-h-[80px]"
-            disabled={loading}
+            placeholder="Examples: How can I improve my SEO score? What accessibility issues need attention first?"
+            className="min-h-[100px]"
           />
           
-          <Button type="submit" disabled={loading || !question.trim()}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Thinking...
-              </>
-            ) : (
-              'Ask Question'
-            )}
-          </Button>
+          {answer && (
+            <div className="bg-secondary/50 p-4 rounded-md">
+              <p className="text-sm whitespace-pre-wrap">{answer}</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button type="submit" disabled={isLoading || !question.trim()}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </form>
-        
-        {answer && (
-          <div className="mt-4 p-4 bg-muted rounded-md overflow-auto max-h-[300px]">
-            <h4 className="text-sm font-medium mb-2">AI Response:</h4>
-            <div className="text-sm whitespace-pre-wrap">{answer}</div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

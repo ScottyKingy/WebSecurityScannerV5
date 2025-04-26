@@ -1,6 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Code } from 'lucide-react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,95 +7,83 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { Code } from 'lucide-react';
 
 interface DevModeModalProps {
   scanId: string;
   scannerKey: string;
+  promptLog?: any;
 }
 
-export function DevModeModal({ scanId, scannerKey }: DevModeModalProps) {
-  const [open, setOpen] = useState(false);
-  const [promptData, setPromptData] = useState<any>(null);
-  const [responseData, setResponseData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+export function DevModeModal({ scanId, scannerKey, promptLog }: DevModeModalProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
-  const fetchDevData = async () => {
-    setLoading(true);
-    
-    try {
-      const response = await fetch(`/api/scan/${scanId}/dev-data?scanner=${scannerKey}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch dev data');
-      }
-      
-      const data = await response.json();
-      setPromptData(data.prompt || null);
-      setResponseData(data.response || null);
-    } catch (error) {
-      console.error('Error fetching dev data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch development data.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch data when the modal opens
-  useEffect(() => {
-    if (open) {
-      fetchDevData();
-    }
-  }, [open]);
-  
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100">
-          <Code size={16} />
-          Dev
+        <Button variant="outline" size="sm" className="h-8">
+          <Code className="h-4 w-4 mr-1" />
+          <span>Dev</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Development Mode</DialogTitle>
+          <DialogTitle>Developer Mode: {scannerKey}</DialogTitle>
           <DialogDescription>
-            View the raw prompt and response data for scanner: <code>{scannerKey}</code>
+            Technical details for scan ID: {scanId}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden mt-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : (
-            <Tabs defaultValue="prompt" className="h-full flex flex-col">
-              <TabsList className="mb-4">
-                <TabsTrigger value="prompt">Prompt</TabsTrigger>
-                <TabsTrigger value="response">Response</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="prompt" className="flex-1 overflow-auto">
-                <pre className="bg-slate-900 text-slate-50 p-4 rounded-md overflow-auto text-xs h-[400px]">
-                  {promptData ? JSON.stringify(promptData, null, 2) : 'No prompt data available'}
+        <Tabs defaultValue="raw" className="h-full overflow-hidden flex flex-col">
+          <TabsList>
+            <TabsTrigger value="raw">Raw Data</TabsTrigger>
+            <TabsTrigger value="prompt">Prompt</TabsTrigger>
+            <TabsTrigger value="response">Response</TabsTrigger>
+            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex-1 overflow-auto">
+            <TabsContent value="raw" className="h-full">
+              <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs h-full overflow-auto">
+                {JSON.stringify(promptLog || {}, null, 2)}
+              </pre>
+            </TabsContent>
+            
+            <TabsContent value="prompt" className="h-full">
+              <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs h-full overflow-auto">
+                {promptLog?.prompt || 'Prompt not available'}
+              </pre>
+            </TabsContent>
+            
+            <TabsContent value="response" className="h-full">
+              <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs h-full overflow-auto">
+                {promptLog?.response || 'Response not available'}
+              </pre>
+            </TabsContent>
+            
+            <TabsContent value="metrics" className="h-full">
+              <div className="space-y-2 p-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-muted p-2 rounded-md">
+                    <h3 className="text-sm font-medium">Tokens Used</h3>
+                    <p className="text-2xl font-bold">{promptLog?.tokens_used || 'N/A'}</p>
+                  </div>
+                  <div className="bg-muted p-2 rounded-md">
+                    <h3 className="text-sm font-medium">Processing Time</h3>
+                    <p className="text-2xl font-bold">{promptLog?.processing_time ? `${promptLog.processing_time}ms` : 'N/A'}</p>
+                  </div>
+                </div>
+                
+                <h3 className="text-sm font-medium mt-4">Model Parameters</h3>
+                <pre className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs overflow-auto">
+                  {JSON.stringify(promptLog?.model_params || {}, null, 2)}
                 </pre>
-              </TabsContent>
-              
-              <TabsContent value="response" className="flex-1 overflow-auto">
-                <pre className="bg-slate-900 text-slate-50 p-4 rounded-md overflow-auto text-xs h-[400px]">
-                  {responseData ? JSON.stringify(responseData, null, 2) : 'No response data available'}
-                </pre>
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
