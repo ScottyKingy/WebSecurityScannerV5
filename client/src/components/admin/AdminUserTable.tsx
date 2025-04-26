@@ -90,12 +90,12 @@ export function AdminUserTable({ users, onRefresh, openCreditModal }: AdminUserT
       }
       
       // Apply role filter
-      if (roleFilter && user.role !== roleFilter) {
+      if (roleFilter && roleFilter !== 'all_roles' && user.role !== roleFilter) {
         return false;
       }
       
       // Apply tier filter
-      if (tierFilter && user.tier !== tierFilter) {
+      if (tierFilter && tierFilter !== 'all_tiers' && user.tier !== tierFilter) {
         return false;
       }
       
@@ -192,7 +192,7 @@ export function AdminUserTable({ users, onRefresh, openCreditModal }: AdminUserT
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Roles</SelectItem>
+                <SelectItem value="all_roles">All Roles</SelectItem>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
@@ -205,7 +205,7 @@ export function AdminUserTable({ users, onRefresh, openCreditModal }: AdminUserT
                 <SelectValue placeholder="Tier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Tiers</SelectItem>
+                <SelectItem value="all_tiers">All Tiers</SelectItem>
                 <SelectItem value="lite">Lite</SelectItem>
                 <SelectItem value="deep">Deep</SelectItem>
                 <SelectItem value="ultimate">Ultimate</SelectItem>
