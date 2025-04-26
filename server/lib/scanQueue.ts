@@ -1,8 +1,29 @@
 /**
  * Scan Queue Manager
- * This is a stub implementation that will be replaced with a proper queue system like BullMQ
- * in the future. For now, it just logs the scan request and returns a mock task ID.
+ * Manages scan jobs using BullMQ queue system
  */
+import { Queue } from 'bullmq';
+import { getEnabledScanners } from './scannerConfig';
+import { db } from '../db';
+import { scans } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
+// Create a BullMQ queue for scan jobs
+// Note: In a real production environment, you'd configure Redis connection settings from environment variables
+const scanQueue = new Queue('scan-jobs', {
+  connection: { 
+    host: process.env.REDIS_HOST || 'localhost', 
+    port: parseInt(process.env.REDIS_PORT || '6379')
+  },
+  // If Redis connection fails, fall back to local processing mode
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  },
+});
 
 /**
  * Queue a scan task for processing
@@ -13,10 +34,37 @@
 export async function queueScanTask(scanId: string, domains: string[]): Promise<string> {
   console.log(`[queue] Queuing scan ${scanId} for:`, domains);
   
-  // This is a stub implementation. In a real system, this would add the job to a queue
-  // using something like BullMQ, and workers would pick up the job and process it.
+  // Get enabled scanners from configuration
+  const scannerKeys = getEnabledScanners();
+  console.log(`[queue] Using scanners: ${scannerKeys.join(', ')}`);
   
-  return `queued-task-id-${scanId}`;
+  try {
+    // Add the job to the queue
+    const job = await scanQueue.add('runScan', {
+      scanId,
+      domains,
+      scannerKeys,
+      timestamp: new Date().toISOString()
+    });
+    
+    // TypeScript typings for BullMQ are sometimes imperfect, so we handle possible undefined
+    const jobId = job.id || `queue-job-${Date.now()}`;
+    console.log(`[queue] Successfully queued job ${jobId} for scan ${scanId}`);
+    return jobId.toString();
+  } catch (error) {
+    console.error(`[queue] Error queuing scan ${scanId}:`, error);
+    
+    // If queue fails, update scan status to 'failed'
+    try {
+      await db.update(scans)
+        .set({ status: 'failed' })
+        .where(eq(scans.id, scanId));
+    } catch (dbError) {
+      console.error(`[queue] Error updating scan status:`, dbError);
+    }
+    
+    throw new Error(`Failed to queue scan job: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /**

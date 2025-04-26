@@ -1,0 +1,127 @@
+### 🧱 Feature ID 6: Prompt Compiler & OpenAI Integration (Python Microservice)
+
+---
+
+### 🎯 Purpose
+Create a dedicated Python microservice responsible for:
+- Compiling scanner prompts dynamically from config
+- Calling OpenAI's ChatCompletion endpoint
+- Validating, structuring, and returning GPT-based scan results
+- Logging raw prompt and response for dev mode
+
+---
+
+### ✅ Prompt 6.1 — Service Setup
+
+Folder Structure:
+```
+/openai-service/
+  ├── main.py             # FastAPI entrypoint
+  ├── prompts/
+  │     └── base_prompt.py
+  ├── models/
+  │     └── schemas.py    # Response models
+  ├── config/
+  │     └── scanners/     # *.config.json
+  ├── utils/
+  │     └── compiler.py   # prompt builder
+  │     └── openai_api.py # API call logic
+```
+
+Dependencies:
+- FastAPI
+- Uvicorn
+- httpx
+- openai
+- pydantic
+
+---
+
+### ✅ Prompt 6.2 — API Endpoint: `POST /run`
+
+In `main.py`:
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from utils.compiler import compile_prompt
+from utils.openai_api import call_openai
+
+class PromptRequest(BaseModel):
+    scanner_key: str
+    content: str
+    context: dict = {}
+
+app = FastAPI()
+
+@app.post("/run")
+async def run_prompt(data: PromptRequest):
+    try:
+        config = load_scanner_config(data.scanner_key)
+        payload = compile_prompt(config, data.content, data.context)
+        gpt_result = await call_openai(payload)
+        return {
+            "scanner_key": data.scanner_key,
+            "prompt": payload,
+            "response": gpt_result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+---
+
+### ✅ Prompt 6.3 — Prompt Compiler
+
+`/utils/compiler.py`:
+```python
+def compile_prompt(config: dict, content: str, context: dict = {}) -> dict:
+    prompt_text = config["prompt"]["user"].replace("{{CONTENT}}", content)
+    return {
+        "model": config.get("model", "gpt-4"),
+        "messages": [
+            {"role": "system", "content": config["prompt"]["system"]},
+            {"role": "user", "content": prompt_text}
+        ],
+        "max_tokens": config.get("tokenLimit", 2048)
+    }
+```
+
+---
+
+### ✅ Prompt 6.4 — OpenAI Request Logic
+
+`/utils/openai_api.py`:
+```python
+import openai
+
+async def call_openai(payload: dict) -> dict:
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    response = await openai.ChatCompletion.acreate(**payload)
+    return response["choices"][0]["message"]["content"]
+```
+
+Features:
+- Retry on rate limit
+- Capture total tokens used (for telemetry)
+- Store raw input/output for dev-mode JSON viewer
+
+---
+
+### ✅ Prompt 6.5 — Config Loader (Shared)
+
+`/utils/config.py`:
+```python
+import json, os
+
+def load_scanner_config(key: str):
+    path = os.path.join("config/scanners", f"{key}.config.json")
+    with open(path) as f:
+        return json.load(f)
+```
+
+---
+
+### 🧠 Notes
+- All outputs returned from this service will be saved in `scan_results` table by Node.js backend
+- Logs should include: scanner_key, prompt_length, response_length, tokens_used
+- Future: Add streaming support via SSE or WebSocket

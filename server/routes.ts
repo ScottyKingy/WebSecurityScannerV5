@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import authRoutes from './routes/auth';
 import creditsRoutes from './routes/credits';
 import scanRoutes from './routes/scan';
+import scanStatusRoutes from './routes/scanStatus';
 import { ensureTablesExist } from './db';
 import { db } from './db';
 import { users } from '@shared/schema';
@@ -17,6 +18,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/auth', authRoutes);
   app.use('/api/credits', creditsRoutes);
   app.use('/api/scan', scanRoutes);
+  app.use('/api/scan-status', scanStatusRoutes);
   
   // Admin routes
   app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
