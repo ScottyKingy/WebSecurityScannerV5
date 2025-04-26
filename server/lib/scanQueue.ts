@@ -2,10 +2,12 @@
  * Scan Queue Manager
  * Manages scan jobs with a fallback local queue if Redis is not available
  */
-import { getEnabledScanners } from './scannerConfig';
+import { getEnabledScanners, loadScannerConfig } from './scannerConfig';
+import { runScannerPrompt } from './openaiService';
 import { db } from '../db';
 import { scans } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { httpClient } from './httpClient';
 
 // Use an in-memory job queue for development, since Redis isn't available
 class InMemoryQueue {
@@ -59,21 +61,95 @@ class InMemoryQueue {
         })
         .where(eq(scans.id, job.data.scanId));
       
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Get scan data
+      const { scanId, domains, scannerKeys } = job.data;
       
-      // Mark job as completed
-      job.status = 'completed';
-      console.log(`[local-queue] Completed job ${jobId}`);
+      // Fetch content for each domain (in a real system, this would make HTTP requests)
+      const results = {};
       
-      // Update scan status in database
+      for (const domain of domains) {
+        try {
+          console.log(`[scan] Fetching content for ${domain}`);
+          
+          // In a real system, this would be an actual HTTP request to the domain
+          // For now, we'll simulate with a mock response
+          const mockHtmlContent = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Sample Website - ${domain}</title>
+                <meta name="description" content="Sample website for ${domain}">
+              </head>
+              <body>
+                <h1>Welcome to ${domain}</h1>
+                <p>This is a sample website for testing the scanner.</p>
+                <div class="content">
+                  <h2>Our Services</h2>
+                  <ul>
+                    <li>Service 1</li>
+                    <li>Service 2</li>
+                    <li>Service 3</li>
+                  </ul>
+                </div>
+                <script src="script.js"></script>
+              </body>
+            </html>
+          `;
+          
+          // For each enabled scanner, process the content with OpenAI
+          const domainResults = {};
+          
+          for (const scannerKey of scannerKeys) {
+            try {
+              // Get scanner configuration
+              const scannerConfig = loadScannerConfig(scannerKey);
+              
+              if (!scannerConfig) {
+                console.warn(`[scan] Scanner ${scannerKey} configuration not found, skipping`);
+                continue;
+              }
+              
+              console.log(`[scan] Running ${scannerKey} scanner on ${domain}`);
+              
+              // Call the OpenAI service to analyze the content
+              const scanResults = await runScannerPrompt(
+                scannerKey,
+                mockHtmlContent,
+                { domain, scanId }
+              );
+              
+              // Store the results
+              domainResults[scannerKey] = scanResults;
+              
+              console.log(`[scan] ${scannerKey} scan complete for ${domain} with ${scanResults?.metrics?.length || 0} metrics`);
+            } catch (scannerError) {
+              console.error(`[scan] Error running ${scannerKey} scanner on ${domain}:`, scannerError);
+              domainResults[scannerKey] = { error: scannerError.message };
+            }
+          }
+          
+          results[domain] = domainResults;
+        } catch (domainError) {
+          console.error(`[scan] Error processing ${domain}:`, domainError);
+          results[domain] = { error: domainError.message };
+        }
+      }
+      
+      // Store the results in the database
       await db.update(scans)
         .set({ 
           status: 'complete',
+          results: JSON.stringify(results),
+          completedAt: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(scans.id, job.data.scanId));
-        
+        .where(eq(scans.id, scanId));
+      
+      // Mark job as completed
+      job.status = 'completed';
+      job.results = results;
+      console.log(`[local-queue] Completed job ${jobId}`);
+      
     } catch (error) {
       job.status = 'failed';
       job.error = error instanceof Error ? error.message : String(error);
@@ -83,6 +159,7 @@ class InMemoryQueue {
       await db.update(scans)
         .set({ 
           status: 'failed',
+          error: job.error,
           updatedAt: new Date()
         })
         .where(eq(scans.id, job.data.scanId));

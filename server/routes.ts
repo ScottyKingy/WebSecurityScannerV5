@@ -20,6 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/credits', creditsRoutes);
   app.use('/api/scan', scanRoutes);
   app.use('/api/scan-status', scanStatusRoutes);
+  app.use('/api/scanners', scannersRoutes);
   
   // Admin routes
   app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
