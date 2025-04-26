@@ -1,16 +1,60 @@
 {
   "scannerKey": "seo",
   "name": "SEO Scanner",
-  "description": "Analyzes website SEO factors including meta tags, headings, and content structure",
+  "description": "Analyzes search engine optimization factors like metadata, content quality, and keyword usage",
+  "version": "1.0.0",
   "enabled": true,
-  "creditCost": 1,
-  "settings": {
-    "checkMetaTags": true,
-    "checkHeadings": true,
-    "checkImageAlt": true,
-    "checkLinks": true,
-    "checkKeywordDensity": true,
-    "maxUrlsPerScan": 20
-  },
-  "version": "1.0.0"
+  "creditsPerScan": 2,
+  "tierAccess": ["deep", "ultimate", "enterprise"],
+  "metrics": [
+    {
+      "key": "titleTag",
+      "name": "Title Tag",
+      "description": "Analyzes page title effectiveness",
+      "unit": "score"
+    },
+    {
+      "key": "metaDescription",
+      "name": "Meta Description",
+      "description": "Evaluates meta description quality",
+      "unit": "score"
+    },
+    {
+      "key": "headingStructure",
+      "name": "Heading Structure",
+      "description": "Checks proper use of H1-H6 tags",
+      "unit": "score"
+    },
+    {
+      "key": "contentLength",
+      "name": "Content Length",
+      "description": "Measures word count",
+      "unit": "words"
+    },
+    {
+      "key": "keywordDensity",
+      "name": "Keyword Density",
+      "description": "Analyzes keyword usage",
+      "unit": "percentage"
+    },
+    {
+      "key": "internalLinks",
+      "name": "Internal Links",
+      "description": "Count of internal links",
+      "unit": "count"
+    },
+    {
+      "key": "externalLinks",
+      "name": "External Links",
+      "description": "Count of external links",
+      "unit": "count"
+    },
+    {
+      "key": "imageAltTags",
+      "name": "Image Alt Tags",
+      "description": "Percentage of images with alt tags",
+      "unit": "percentage"
+    }
+  ],
+  "processingTimeEstimate": 60
 }

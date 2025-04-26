@@ -1,14 +1,42 @@
 {
   "scannerKey": "performance",
   "name": "Performance Scanner",
-  "description": "Analyzes website performance metrics including loading speed, resource usage, and Core Web Vitals",
+  "description": "Analyzes website performance metrics including load time, page size, and rendering performance",
+  "version": "1.0.0",
   "enabled": true,
-  "creditCost": 1,
-  "settings": {
-    "throttling": true,
-    "deviceEmulation": "mobile",
-    "captureScreenshots": true,
-    "maxUrlsPerScan": 20
-  },
-  "version": "1.0.0"
+  "creditsPerScan": 1,
+  "tierAccess": ["lite", "deep", "ultimate", "enterprise"],
+  "metrics": [
+    {
+      "key": "pageLoadTime",
+      "name": "Page Load Time",
+      "description": "Time to fully load the page",
+      "unit": "seconds"
+    },
+    {
+      "key": "firstContentfulPaint",
+      "name": "First Contentful Paint",
+      "description": "Time until first content appears",
+      "unit": "seconds"
+    },
+    {
+      "key": "largestContentfulPaint",
+      "name": "Largest Contentful Paint",
+      "description": "Time until largest content element appears",
+      "unit": "seconds"
+    },
+    {
+      "key": "cumulativeLayoutShift",
+      "name": "Cumulative Layout Shift",
+      "description": "Measures visual stability",
+      "unit": "score"
+    },
+    {
+      "key": "totalPageSize",
+      "name": "Total Page Size",
+      "description": "Total downloaded bytes",
+      "unit": "KB"
+    }
+  ],
+  "processingTimeEstimate": 30
 }

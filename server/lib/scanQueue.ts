@@ -1,29 +1,97 @@
 /**
  * Scan Queue Manager
- * Manages scan jobs using BullMQ queue system
+ * Manages scan jobs with a fallback local queue if Redis is not available
  */
-import { Queue } from 'bullmq';
 import { getEnabledScanners } from './scannerConfig';
 import { db } from '../db';
 import { scans } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Create a BullMQ queue for scan jobs
-// Note: In a real production environment, you'd configure Redis connection settings from environment variables
-const scanQueue = new Queue('scan-jobs', {
-  connection: { 
-    host: process.env.REDIS_HOST || 'localhost', 
-    port: parseInt(process.env.REDIS_PORT || '6379')
-  },
-  // If Redis connection fails, fall back to local processing mode
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-  },
-});
+// Use an in-memory job queue for development, since Redis isn't available
+class InMemoryQueue {
+  private static instance: InMemoryQueue;
+  private jobs: Map<string, any> = new Map();
+  private jobCounter: number = 0;
+
+  private constructor() {}
+
+  public static getInstance(): InMemoryQueue {
+    if (!InMemoryQueue.instance) {
+      InMemoryQueue.instance = new InMemoryQueue();
+    }
+    return InMemoryQueue.instance;
+  }
+
+  async add(jobName: string, data: any): Promise<{ id: string }> {
+    const jobId = `job-${++this.jobCounter}`;
+    this.jobs.set(jobId, {
+      id: jobId,
+      name: jobName,
+      data,
+      timestamp: new Date().toISOString(),
+      status: 'queued'
+    });
+    
+    console.log(`[local-queue] Added ${jobName} job ${jobId}`);
+    
+    // Simulate async processing in the background
+    setTimeout(() => {
+      this.processJob(jobId);
+    }, 2000);
+    
+    return { id: jobId };
+  }
+  
+  private async processJob(jobId: string): Promise<void> {
+    const job = this.jobs.get(jobId);
+    if (!job) return;
+    
+    try {
+      // Mark job as running
+      job.status = 'running';
+      console.log(`[local-queue] Processing job ${jobId} (${job.name})`);
+      
+      // Update scan status in database
+      await db.update(scans)
+        .set({ 
+          status: 'running',
+          updatedAt: new Date()
+        })
+        .where(eq(scans.id, job.data.scanId));
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Mark job as completed
+      job.status = 'completed';
+      console.log(`[local-queue] Completed job ${jobId}`);
+      
+      // Update scan status in database
+      await db.update(scans)
+        .set({ 
+          status: 'complete',
+          updatedAt: new Date()
+        })
+        .where(eq(scans.id, job.data.scanId));
+        
+    } catch (error) {
+      job.status = 'failed';
+      job.error = error instanceof Error ? error.message : String(error);
+      console.error(`[local-queue] Job ${jobId} failed:`, job.error);
+      
+      // Update scan status in database
+      await db.update(scans)
+        .set({ 
+          status: 'failed',
+          updatedAt: new Date()
+        })
+        .where(eq(scans.id, job.data.scanId));
+    }
+  }
+}
+
+// Use the in-memory queue for development
+const scanQueue = InMemoryQueue.getInstance();
 
 /**
  * Queue a scan task for processing

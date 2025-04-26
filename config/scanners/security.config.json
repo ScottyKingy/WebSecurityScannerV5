@@ -1,15 +1,60 @@
 {
   "scannerKey": "security",
   "name": "Security Scanner",
-  "description": "Analyzes website security factors including HTTPS, headers, and common vulnerabilities",
+  "description": "Analyzes website security posture including SSL, headers, vulnerabilities, and data protection",
+  "version": "1.0.0",
   "enabled": true,
-  "creditCost": 2,
-  "settings": {
-    "checkHttps": true,
-    "checkHeaders": true,
-    "checkCookies": true,
-    "checkVulnerabilities": true,
-    "maxUrlsPerScan": 10
-  },
-  "version": "1.0.0"
+  "creditsPerScan": 3,
+  "tierAccess": ["ultimate", "enterprise"],
+  "metrics": [
+    {
+      "key": "sslCertificate",
+      "name": "SSL Certificate",
+      "description": "Checks SSL certificate validity and strength",
+      "unit": "score"
+    },
+    {
+      "key": "securityHeaders",
+      "name": "Security Headers",
+      "description": "Evaluates HTTP security headers",
+      "unit": "score"
+    },
+    {
+      "key": "contentSecurityPolicy",
+      "name": "Content Security Policy",
+      "description": "Analyzes CSP implementation",
+      "unit": "score"
+    },
+    {
+      "key": "mixedContent",
+      "name": "Mixed Content",
+      "description": "Checks for mixed HTTP/HTTPS content",
+      "unit": "count"
+    },
+    {
+      "key": "vulnerableLibraries",
+      "name": "Vulnerable Libraries",
+      "description": "Detects known vulnerable JavaScript libraries",
+      "unit": "count"
+    },
+    {
+      "key": "xssProtection",
+      "name": "XSS Protection",
+      "description": "Evaluates cross-site scripting protections",
+      "unit": "score"
+    },
+    {
+      "key": "clickjackingProtection",
+      "name": "Clickjacking Protection",
+      "description": "Checks X-Frame-Options header",
+      "unit": "boolean"
+    },
+    {
+      "key": "cookieSecurity",
+      "name": "Cookie Security",
+      "description": "Analyzes cookie security settings",
+      "unit": "score"
+    }
+  ],
+  "processingTimeEstimate": 120
 }
