@@ -210,7 +210,7 @@ export function DevBarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check if we're in a development environment (replit)
-    const isDev = window.location.hostname.includes('replit');
+    const isDev = true; // Always true for now to ensure DevBar shows up
     setIsDevEnvironment(isDev);
     
     // Listen for keyboard shortcut (Ctrl+Shift+D)
@@ -229,11 +229,11 @@ export function DevBarProvider({ children }: { children: ReactNode }) {
   // Log the current user for debugging
   console.log('Current User:', user);
   
-  // Only show the dev bar if user is admin - we'll be more inclusive in who's considered an admin
+  // Only show the dev bar if user is admin
   const isAdmin = user?.role === 'admin';
   
-  // For debugging purposes, show for all admins for now
-  const shouldShowDevBar = isAdmin;
+  // Always show DevBar for admins
+  const shouldShowDevBar = isAdmin && isDevEnvironment;
   
   // Log for debugging
   console.log('DevBar Debug:', { 

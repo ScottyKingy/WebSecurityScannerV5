@@ -1,0 +1,147 @@
+### 🧱 Feature ID 8A: Updated Report Page Shell (`/reports/[scanId]`) & Auto-Registry Card Renderer
+
+---
+
+### 🎯 Purpose
+Create the dynamic, auto-registry version of the Report Page:
+- Renders scan result cards dynamically
+- Handles restricted/preview scan mode for unauthenticated or Lite users
+- Includes Dev Mode diagnostics and AskAI prompt launching
+
+---
+
+### ✅ Prompt 8.1 — Create Page `/client/pages/reports/[scanId].tsx`
+
+Page Layout:
+```tsx
+import { useParams } from 'next/navigation';
+import { useScanData } from '@/hooks/useScanData';
+import { CardRenderer } from '@/components/report/CardRenderer';
+import { RestrictedBanner } from '@/components/report/RestrictedBanner';
+import { SkeletonReportLayout } from '@/components/ui/Skeletons';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { useSession } from '@/hooks/useSession';
+
+export default function ReportPage() {
+  const { scanId } = useParams();
+  const { data, isLoading, error } = useScanData(scanId);
+  const { user, loading: sessionLoading } = useSession();
+
+  if (isLoading || sessionLoading) return <SkeletonReportLayout />;
+  if (error) return <ErrorBanner message="Scan failed to load" />;
+
+  const isRestricted = !user || (user.tier === 'lite' && data.isPreview);
+
+  return (
+    <div className="report-container">
+      <h1 className="text-2xl font-bold mb-6">AI Readiness Report</h1>
+      {isRestricted ? (
+        <>
+          <RestrictedBanner />
+          <CardRenderer results={data.previewResults} scanId={scanId} restricted />
+        </>
+      ) : (
+        <CardRenderer results={data.results} scanId={scanId} />
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### ✅ Prompt 8.2 — Create `useScanData(scanId)` Hook
+
+File: `/client/hooks/useScanData.ts`
+```tsx
+import { useQuery } from '@tanstack/react-query';
+
+export function useScanData(scanId: string) {
+  return useQuery(["scan", scanId], async () => {
+    const res = await fetch(`/api/scan/results/${scanId}`);
+    if (!res.ok) throw new Error("Scan fetch failed");
+    return res.json();
+  });
+}
+```
+
+Expected API Response Format:
+```json
+{
+  "scanId": "uuid",
+  "isPreview": false,
+  "results": [...],
+  "previewResults": [...]
+}
+```
+
+---
+
+### ✅ Prompt 8.3 — Create Auto-Registry `CardRenderer.tsx`
+
+File: `/client/components/report/CardRenderer.tsx`
+```tsx
+import dynamic from 'next/dynamic';
+import { fallbackCard } from './cards/FallbackCard';
+
+export function CardRenderer({ results, scanId, restricted = false }) {
+  return (
+    <div className="grid gap-6">
+      {results.map((r) => {
+        try {
+          const Component = dynamic(() => import(`./cards/${toCardName(r.scannerKey)}Card`), { ssr: false });
+          return <Component key={r.scannerKey} data={r.output} scanId={scanId} restricted={restricted} />;
+        } catch {
+          return <fallbackCard key={r.scannerKey} />;
+        }
+      })}
+    </div>
+  );
+}
+
+function toCardName(scannerKey: string) {
+  return scannerKey.charAt(0).toUpperCase() + scannerKey.slice(1);
+}
+```
+
+---
+
+### ✅ Prompt 8.4 — Dev Mode, Ask AI, and Restricted Mode Integration
+
+All cards must:
+- Accept props: `{ data, scanId, restricted }`
+- Display DevMode diagnostics (show raw JSON, prompt log)
+- Trigger AskAI modal scoped to `scannerKey`
+
+Restricted cards must:
+- Render "Preview" dummy data if in restricted mode
+- Block sensitive interactions (AskAI, live GPT calls)
+- Display locked CTA overlay prompting upgrade
+
+---
+
+### 🧠 Dev Notes
+- DevMode should toggle raw JSON for both real and preview scans
+- Telemetry Events:
+  - `scan.viewed.restricted`
+  - `scan.card.loaded.dynamic`
+  - `askai.triggered`
+- Add fallback handling for missing cards with graceful UX
+- Add graceful degradation if previewResults missing (edge case)
+
+---
+
+### 📋 REPLIT Coder Instructions (Copy & Paste Block)
+
+**Copy & Paste Start:**
+```
+- Create `/client/pages/reports/[scanId].tsx`
+- Create `/client/hooks/useScanData.ts`
+- Create `/client/components/report/CardRenderer.tsx` using Auto-Registry pattern
+- Create `/client/components/report/RestrictedBanner.tsx` for restricted UX flow
+- Update all existing cards (Overall, Accessibility, SEO, etc.) to accept `{ restricted }` prop
+```
+**Copy & Paste End.**
+
+✅ ID8A Complete — Full restoration + expansion + clean PRD formatting for Replit-ready execution.
+✅ Ready to proceed to ID9A next!
