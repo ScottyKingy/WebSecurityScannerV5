@@ -1,0 +1,108 @@
+### 🧱 Feature ID 1: Auth-01 – User Authentication, Role & Tier Enforcement (Express.js Version)
+
+---
+
+### ✅ Prompt 1.1 — User Auth, JWT, and Role/Tier Model
+
+Create:
+- `/server/routes/auth.ts`
+- `/server/lib/jwt.ts`
+- `/prisma/schema.prisma`
+
+Prisma User Model:
+```prisma
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash String
+  role          String   @default("user") // admin | user
+  tier          String   @default("lite") // anonymous | lite | deep | ultimate | enterprise
+  createdAt     DateTime @default(now())
+  lastLogin     DateTime?
+  isVerified    Boolean  @default(false)
+  creditsBalance CreditsBalance?
+  creditsTransactions CreditsTransaction[]
+}
+```
+
+Auth Routes:
+```ts
+// POST /api/auth/register
+// POST /api/auth/login
+// GET /api/auth/me (requires auth)
+```
+
+JWT Helpers (`/server/lib/jwt.ts`):
+```ts
+export function generateAccessToken(user) {...}
+export function generateRefreshToken(user) {...}
+export function verifyToken(token: string) {...}
+```
+
+Middleware:
+```ts
+export function requireAuth(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  try {
+    req.user = verifyToken(token);
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
+```
+
+---
+
+### ✅ Prompt 1.2 — Role & Tier Middleware
+
+Tier hierarchy:
+```ts
+const tierOrder = ["anonymous", "lite", "deep", "ultimate", "enterprise"];
+```
+
+Middleware:
+```ts
+export function requireTier(minTier: string) {
+  return function (req, res, next) {
+    const userTier = req.user?.tier;
+    if (tierOrder.indexOf(userTier) < tierOrder.indexOf(minTier)) {
+      return res.status(403).json({ error: "Upgrade required for this feature" });
+    }
+    next();
+  }
+}
+
+export function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: "Admin only" });
+  }
+  next();
+}
+```
+
+Example usage in routes:
+```ts
+router.get("/credits/history", requireAuth, requireTier("deep"), handler);
+router.get("/admin/users", requireAuth, requireAdmin, handler);
+```
+
+---
+
+### ✅ Prompt 1.3 — Session Persistence and Frontend Hooks
+
+Add routes:
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+
+Frontend (React):
+- Store access token in memory or localStorage
+- Optionally store refresh token in secure cookie
+- Use fetch/axios interceptors to retry expired requests with token refresh
+
+Security:
+- JWT secrets must be stored in `.env`
+- Use rotating refresh token logic for added safety (optional)
+- Log `login`, `register`, `logout`, `refresh` events for audit trail
+
+All auth logic now runs fully inside Express.js + Prisma stack.

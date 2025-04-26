@@ -1,0 +1,137 @@
+### 🧱 Feature ID 2: Credits-01 – Credit Ledger Schema & Balance API (Express.js Version)
+
+---
+
+### ✅ Prompt 2.1 — Credit Schema: Balance & Transactions (PostgreSQL + Prisma)
+
+Create:
+- `/prisma/schema.prisma`
+- `/server/routes/credits.ts`
+- `/server/lib/credits.ts`
+
+Prisma Models:
+```prisma
+model CreditsBalance {
+  userId          String   @id
+  currentBalance  Int
+  monthlyAllotment Int
+  rolloverEnabled Boolean  @default(false)
+  rolloverExpiry  DateTime?
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model CreditsTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  type      String   // "scan", "bot", "purchase", etc
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+```
+
+Auto-initialisation:
+- On user registration, create a `CreditsBalance` entry with `currentBalance: 0`
+
+---
+
+### ✅ Prompt 2.2 — Credit Balance API Endpoints
+
+Add to `/server/routes/credits.ts`:
+
+- `GET /api/credits/balance`
+```ts
+// Requires auth middleware
+router.get("/balance", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+  const balance = await prisma.creditsBalance.findUnique({ where: { userId } });
+  res.json(balance);
+});
+```
+
+- `GET /api/credits/history`
+```ts
+router.get("/history", requireAuth, async (req, res) => {
+  const tx = await prisma.creditsTransaction.findMany({
+    where: { userId: req.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50
+  });
+  res.json(tx);
+});
+```
+
+- `POST /api/credits/grant` (admin only)
+```ts
+router.post("/grant", requireAdmin, async (req, res) => {
+  const { userId, amount, type, metadata } = req.body;
+  await grantCredits(userId, amount, type, metadata);
+  res.json({ ok: true });
+});
+```
+
+---
+
+### ✅ Prompt 2.3 — Credit Utility Functions
+
+Create `/server/lib/credits.ts`:
+
+```ts
+export async function chargeCredits(userId: string, amount: number, type: string, metadata: any = {}) {
+  const balance = await prisma.creditsBalance.findUnique({ where: { userId } });
+  if (!balance || balance.currentBalance < amount) {
+    throw new Error("Insufficient credits");
+  }
+  await prisma.creditsBalance.update({
+    where: { userId },
+    data: { currentBalance: { decrement: amount } }
+  });
+  await prisma.creditsTransaction.create({
+    data: { userId, amount: -amount, type, metadata }
+  });
+}
+
+export async function refundCredits(userId: string, amount: number, type: string, metadata: any = {}) {
+  await prisma.creditsBalance.update({
+    where: { userId },
+    data: { currentBalance: { increment: amount } }
+  });
+  await prisma.creditsTransaction.create({
+    data: { userId, amount, type, metadata }
+  });
+}
+
+export async function getCreditBalance(userId: string) {
+  return await prisma.creditsBalance.findUnique({ where: { userId } });
+}
+```
+
+---
+
+### ✅ Prompt 2.4 — Permissions, Admin Checks & Enterprise Overrides
+
+Enhancements:
+- If `user.tier === 'enterprise'` and user.unlimitedCredits === true → bypass chargeCredits()
+
+Middleware Setup:
+```ts
+export function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: "Admin access only" });
+  }
+  next();
+}
+```
+
+Security:
+- Log all grants and deductions with metadata (`req.ip`, timestamp, adminId)
+- Emit webhook/event to admin log channel (optional)
+- Add audit history to admin dashboard
+
+Stripe Integration: *(Future Prompt)*
+- On `checkout.session.completed` webhook, calculate purchased credit pack size
+- Call `refundCredits()` or `grantCredits()` with type: `purchase`
+
+All credits logic is now Express-compatible and Prisma-backed. Ready for integration with scanning logic and UI meters.
