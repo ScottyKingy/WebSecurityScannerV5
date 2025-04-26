@@ -1,6 +1,6 @@
 import { db } from '../server/db';
 import { users } from '../shared/schema';
-import { hashPassword } from '../server/auth';
+import bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -10,6 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 async function createAdminUser() {
   try {
     console.log('Creating admin user...');
+    
+    // Hash password (using bcrypt directly like in the auth routes)
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash('admin123', salt);
     
     // Check if admin@example.com already exists
     const existingUsers = await db
@@ -26,7 +30,7 @@ async function createAdminUser() {
         .set({
           role: 'admin',
           tier: 'enterprise',
-          password: await hashPassword('admin123')
+          passwordHash
         })
         .where(eq(users.email, 'admin@example.com'));
     } else {
@@ -34,9 +38,8 @@ async function createAdminUser() {
       await db
         .insert(users)
         .values({
-          id: uuidv4(),
           email: 'admin@example.com',
-          password: await hashPassword('admin123'),
+          passwordHash,
           role: 'admin',
           tier: 'enterprise',
           createdAt: new Date(),
