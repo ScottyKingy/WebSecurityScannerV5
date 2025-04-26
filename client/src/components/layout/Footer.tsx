@@ -18,19 +18,13 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/dashboard">
-                  <a className="text-gray-600 hover:text-primary text-sm">Dashboard</a>
-                </Link>
+                <Link href="/dashboard" className="text-gray-600 hover:text-primary text-sm">Dashboard</Link>
               </li>
               <li>
-                <Link href="/scans">
-                  <a className="text-gray-600 hover:text-primary text-sm">Scans</a>
-                </Link>
+                <Link href="/scans" className="text-gray-600 hover:text-primary text-sm">Scans</Link>
               </li>
               <li>
-                <Link href="/scan-wizard">
-                  <a className="text-gray-600 hover:text-primary text-sm">New Scan</a>
-                </Link>
+                <Link href="/scan-wizard" className="text-gray-600 hover:text-primary text-sm">New Scan</Link>
               </li>
             </ul>
           </div>

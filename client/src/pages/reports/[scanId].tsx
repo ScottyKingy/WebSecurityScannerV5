@@ -5,7 +5,7 @@ import { CardRenderer } from '@/components/report/CardRenderer';
 import { RestrictedBanner } from '@/components/report/RestrictedBanner';
 import { SkeletonReportLayout } from '@/components/ui/Skeletons';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-import { useSession } from '@/hooks/useSession';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Share2, Download, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -33,9 +33,9 @@ export default function ReportPage() {
   }, [location, navigate, toast]);
   
   const { data, isLoading, error, refetch } = useScanData(scanId);
-  const { user, loading: sessionLoading, userTier } = useSession();
+  const { user, isLoading: authLoading } = useAuth();
 
-  if (isLoading || sessionLoading) return <SkeletonReportLayout />;
+  if (isLoading || authLoading) return <SkeletonReportLayout />;
   
   if (error) {
     return (
@@ -62,7 +62,7 @@ export default function ReportPage() {
 
   // Determine if the user should see restricted content
   // A user sees restricted content if they are not logged in or are on the lite tier
-  const isRestricted = !user || userTier === 'lite';
+  const isRestricted = !user || user?.tier === 'lite';
 
   return (
     <div className="container max-w-5xl py-10">
