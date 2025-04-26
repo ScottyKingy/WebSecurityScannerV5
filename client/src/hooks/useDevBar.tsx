@@ -26,13 +26,12 @@ type DevBarContextType = {
 
 const DevBarContext = createContext<DevBarContextType | null>(null);
 
-function DevBarPanel() {
+function DevBarPanel({ toggleVisibility }: { toggleVisibility: () => void }) {
   const { user, refetch } = useAuth();
   const [selectedTier, setSelectedTier] = useState(user?.tier || 'lite');
   const [creditAmount, setCreditAmount] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { toggleVisibility } = useDevBar();
 
   // Handle tier change
   const handleTierChange = async (value: string) => {
@@ -238,7 +237,24 @@ export function DevBarProvider({ children }: { children: ReactNode }) {
   return (
     <DevBarContext.Provider value={{ isVisible, toggleVisibility }}>
       {children}
-      {shouldShowDevBar && isVisible && <DevBarPanel />}
+      {shouldShowDevBar && isVisible && <DevBarPanel toggleVisibility={toggleVisibility} />}
+      {shouldShowDevBar && (
+        <button
+          onClick={toggleVisibility}
+          className={`fixed bottom-4 right-4 z-50 p-2 rounded-full shadow-lg border ${
+            isVisible ? 'bg-red-500 text-white border-red-600' : 'bg-yellow-100 text-gray-800 border-yellow-300'
+          }`}
+          title="Toggle Developer Tools"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" y1="9" x2="9.01" y2="9" />
+            <line x1="15" y1="9" x2="15.01" y2="9" />
+          </svg>
+        </button>
+      )}
     </DevBarContext.Provider>
   );
 }
