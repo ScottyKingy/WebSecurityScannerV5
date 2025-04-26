@@ -76,9 +76,30 @@ export const insertTokenSchema = createInsertSchema(tokens).omit({
   createdAt: true,
 });
 
+// Scan model
+export const scans = pgTable("scans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  primaryUrl: text("primary_url").notNull(),
+  competitors: text("competitors").array().notNull(),
+  status: text("status").notNull(), // queued | running | complete | failed
+  creditsUsed: integer("credits_used").notNull(),
+  scanType: text("scan_type").notNull(), // single | multi | competitor
+  source: text("source").notNull(), // web | api | scheduled
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schema for scans
+export const insertScanSchema = createInsertSchema(scans).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type CreditsBalance = typeof creditsBalances.$inferSelect;
 export type CreditsTransaction = typeof creditsTransactions.$inferSelect;
 export type Token = typeof tokens.$inferSelect;
+export type Scan = typeof scans.$inferSelect;
+export type InsertScan = z.infer<typeof insertScanSchema>;
