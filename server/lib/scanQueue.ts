@@ -5,9 +5,10 @@
 import { getEnabledScanners, loadScannerConfig } from './scannerConfig';
 import { runScannerPrompt } from './openaiService';
 import { db } from '../db';
-import { scans } from '@shared/schema';
+import { scans, scanResults } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { httpClient } from './httpClient';
+import { validateScanOutputSafe } from '../utils/validateScanResult';
 
 // Use an in-memory job queue for development, since Redis isn't available
 class InMemoryQueue {
@@ -112,26 +113,99 @@ class InMemoryQueue {
               console.log(`[scan] Running ${scannerKey} scanner on ${domain}`);
               
               // Call the OpenAI service to analyze the content
-              const scanResults = await runScannerPrompt(
+              const openAiResponse = await runScannerPrompt(
                 scannerKey,
                 mockHtmlContent,
                 { domain, scanId }
               );
               
-              // Store the results
-              domainResults[scannerKey] = scanResults;
+              // Convert OpenAI response to standard scan result format
+              const standardizedResult = {
+                score: Math.floor(Math.random() * 100), // In production this would be calculated from metrics
+                percentile_contribution: Math.random(), // In production this would be calculated based on scanner weight
+                summary: openAiResponse?.summary || "Analysis complete",
+                details: `Detailed analysis of ${domain} using ${scannerKey} scanner`,
+                issues: openAiResponse?.metrics?.map((metric: any) => ({
+                  id: `${scannerKey.toUpperCase()}-${metric.key || 'unknown'}`,
+                  title: metric.name || 'Unnamed Metric',
+                  description: metric.details || "",
+                  severity: ["low", "medium", "high", "critical"][Math.floor(Math.random() * 4)] as "low" | "medium" | "high" | "critical",
+                  impact_area: ["SEO", "Performance", "Accessibility", "User Experience"],
+                  effort_estimate: ["low", "medium", "high"][Math.floor(Math.random() * 3)] as "low" | "medium" | "high",
+                  recommendation: metric.details || "Implement best practices"
+                })) || [],
+                remediation_plan: [
+                  {
+                    title: "Improve website structure",
+                    category: scannerKey,
+                    impact_score: Math.floor(Math.random() * 10),
+                    effort_score: Math.floor(Math.random() * 10),
+                    priority: ["low", "medium", "high"][Math.floor(Math.random() * 3)]
+                  }
+                ],
+                charts: {
+                  type: "bar",
+                  data: {
+                    labels: ["Passed", "Warnings", "Failed"],
+                    values: [Math.random() * 10, Math.random() * 10, Math.random() * 10]
+                  }
+                },
+                metadata: {
+                  scanner_key: scannerKey,
+                  scanner_version: "v1.0",
+                  executed_at: new Date().toISOString()
+                }
+              };
               
-              console.log(`[scan] ${scannerKey} scan complete for ${domain} with ${scanResults?.metrics?.length || 0} metrics`);
-            } catch (scannerError) {
+              // Validate the result against our schema
+              const [validatedResult, validationError] = validateScanOutputSafe(standardizedResult);
+              
+              if (validationError) {
+                console.error(`[scan] Validation error for ${scannerKey} result:`, validationError);
+                throw new Error(`Result validation failed for ${scannerKey}: ${validationError.message}`);
+              }
+              
+              if (!validatedResult) {
+                throw new Error(`Failed to validate scan result for ${scannerKey}`);
+              }
+              
+              // Store the validated result in the new scan_results table
+              try {
+                await db.insert(scanResults).values({
+                  scanId,
+                  scannerKey,
+                  score: validatedResult.score,
+                  outputJson: JSON.stringify(validatedResult),
+                  promptLog: JSON.stringify(openAiResponse || {}) // Store raw OpenAI response for debugging
+                });
+                console.log(`[scan] Saved ${scannerKey} result to database for scan ${scanId}`);
+              } catch (dbError) {
+                console.error(`[scan] Error saving scan result to database:`, dbError);
+                throw dbError;
+              }
+              
+              // Store the raw results in the legacy format
+              if (typeof domainResults === 'object') {
+                domainResults[scannerKey] = openAiResponse;
+              }
+              
+              console.log(`[scan] ${scannerKey} scan complete for ${domain} with ${openAiResponse?.metrics?.length || 0} metrics`);
+            } catch (scannerError: unknown) {
               console.error(`[scan] Error running ${scannerKey} scanner on ${domain}:`, scannerError);
-              domainResults[scannerKey] = { error: scannerError.message };
+              if (typeof domainResults === 'object') {
+                domainResults[scannerKey] = { error: scannerError instanceof Error ? scannerError.message : String(scannerError) };
+              }
             }
           }
           
-          results[domain] = domainResults;
-        } catch (domainError) {
+          if (typeof results === 'object') {
+            results[domain] = domainResults;
+          }
+        } catch (domainError: unknown) {
           console.error(`[scan] Error processing ${domain}:`, domainError);
-          results[domain] = { error: domainError.message };
+          if (typeof results === 'object') {
+            results[domain] = { error: domainError instanceof Error ? domainError.message : String(domainError) };
+          }
         }
       }
       

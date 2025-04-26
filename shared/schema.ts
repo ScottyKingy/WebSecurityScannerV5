@@ -90,6 +90,9 @@ export const scans = pgTable("scans", {
   updatedAt: timestamp("updated_at").defaultNow(),
   taskId: text("task_id"),
   scannerKeys: text("scanner_keys").array(),
+  results: text("results"), // JSON string for legacy storage
+  error: text("error"), // Error message if scan failed
+  completedAt: timestamp("completed_at"),
 });
 
 // Insert schema for scans
