@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { db } from '../db';
-import { scans } from '@shared/schema';
+import { scans, scanResults } from '@shared/schema';
 import { queueScanTask, validateUrl, determineScanType } from '../lib/scanQueue';
 import { getEnabledScanners } from '../lib/scannerConfig';
 import { chargeCredits, refundCredits } from '../lib/credits';
@@ -133,6 +133,68 @@ router.get('/:scanId', requireAuth, async (req: Request, res: Response) => {
     return res.json(scan);
   } catch (error) {
     console.error('Error fetching scan:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Get scan results
+ * GET /api/scan/:scanId/results
+ */
+router.get('/:scanId/results', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const scanId = req.params.scanId;
+    const scannerKey = req.query.scannerKey as string | undefined;
+    
+    // First check if the scan exists and user is authorized
+    const [scan] = await db.select()
+      .from(scans)
+      .where(eq(scans.id, scanId as string));
+    
+    if (!scan) {
+      return res.status(404).json({ error: 'Scan not found' });
+    }
+    
+    // Check if the scan belongs to the user
+    if (scan.userId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized to view this scan results' });
+    }
+    
+    // Get the scan results
+    let query = db.select().from(scanResults).where(eq(scanResults.scanId, scanId as string));
+      
+    // Filter by scanner key if provided
+    if (scannerKey) {
+      query = query.where(eq(scanResults.scannerKey, scannerKey));
+    }
+    
+    const results = await query.orderBy(scanResults.createdAt, 'desc');
+    
+    // Format the results to include the parsed JSON
+    const formattedResults = results.map(result => {
+      try {
+        // Parse the JSON strings into objects
+        const outputJson = JSON.parse(result.outputJson);
+        const promptLog = result.promptLog ? JSON.parse(result.promptLog) : null;
+        
+        return {
+          ...result,
+          outputJson,
+          promptLog
+        };
+      } catch (parseError) {
+        console.error(`Error parsing result JSON for scan ${scanId}, result ${result.id}:`, parseError);
+        return {
+          ...result,
+          outputJson: { error: 'Error parsing result data' },
+          promptLog: null
+        };
+      }
+    });
+    
+    return res.json(formattedResults);
+  } catch (error) {
+    console.error('Error fetching scan results:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
