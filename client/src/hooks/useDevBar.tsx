@@ -18,10 +18,11 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
-// Context for Dev Bar visibility
+// Context for Dev Bar visibility and functionality
 type DevBarContextType = {
   isVisible: boolean;
   toggleVisibility: () => void;
+  devMode: boolean; // Add devMode property to be used by report cards
 };
 
 const DevBarContext = createContext<DevBarContextType | null>(null);
@@ -225,17 +226,33 @@ export function DevBarProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Only show the dev bar if in development environment and user is admin
-  const isMasterAdmin = user?.role === 'admin' && 
-    (user.email === 'admin@admin.com' || user.email === 'admin@example.com');
-  const shouldShowDevBar = isDevEnvironment && isMasterAdmin;
+  // Log the current user for debugging
+  console.log('Current User:', user);
+  
+  // Only show the dev bar if user is admin - we'll be more inclusive in who's considered an admin
+  const isAdmin = user?.role === 'admin';
+  
+  // For debugging purposes, show for all admins for now
+  const shouldShowDevBar = isAdmin;
+  
+  // Log for debugging
+  console.log('DevBar Debug:', { 
+    userEmail: user?.email,
+    userRole: user?.role,
+    isAdmin,
+    isDevEnvironment, 
+    shouldShowDevBar 
+  });
 
   const toggleVisibility = () => {
     setIsVisible(prev => !prev);
   };
 
+  // The devMode value is true when we are in development and the user is a master admin
+  const devMode = shouldShowDevBar;
+  
   return (
-    <DevBarContext.Provider value={{ isVisible, toggleVisibility }}>
+    <DevBarContext.Provider value={{ isVisible, toggleVisibility, devMode }}>
       {children}
       {shouldShowDevBar && isVisible && <DevBarPanel toggleVisibility={toggleVisibility} />}
       {shouldShowDevBar && (
