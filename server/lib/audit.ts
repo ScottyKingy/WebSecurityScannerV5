@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { auditLogs } from '@shared/schema';
+import { eq, desc, and, gte, lte } from 'drizzle-orm';
 
 /**
  * Log an admin action to the audit trail
@@ -12,7 +13,7 @@ export async function logAdminAction(userId: string, action: string, details: Re
     await db.insert(auditLogs).values({
       userId,
       action,
-      details
+      details: JSON.stringify(details)
     });
   } catch (error) {
     // Log the error but don't throw - audit logging should not block operations
@@ -35,38 +36,37 @@ export async function getAuditLogs(params: {
   try {
     const { userId, action, startDate, endDate, limit = 50, offset = 0 } = params;
     
-    // Build query conditions
-    const conditions = [];
+    // Start with a base query
+    let query = db.select().from(auditLogs);
     
+    // Apply filters if provided
     if (userId) {
-      conditions.push(auditLogs.userId.equals(userId));
+      query = query.where(eq(auditLogs.userId, userId));
     }
     
     if (action) {
-      conditions.push(auditLogs.action.equals(action));
+      query = query.where(eq(auditLogs.action, action));
     }
     
     if (startDate) {
-      conditions.push(auditLogs.createdAt.gte(startDate));
+      query = query.where(gte(auditLogs.createdAt, startDate));
     }
     
     if (endDate) {
-      conditions.push(auditLogs.createdAt.lte(endDate));
+      query = query.where(lte(auditLogs.createdAt, endDate));
     }
     
-    // Execute query with filters
-    const query = db.select().from(auditLogs);
-    
-    if (conditions.length > 0) {
-      query.where(conditions.reduce((acc, condition) => acc.and(condition)));
-    }
-    
+    // Apply order and pagination
     const logs = await query
-      .orderBy(auditLogs.createdAt.desc())
+      .orderBy(desc(auditLogs.createdAt))
       .limit(limit)
       .offset(offset);
       
-    return logs;
+    // Parse the details JSON string back to an object
+    return logs.map(log => ({
+      ...log,
+      details: JSON.parse(log.details as string)
+    }));
   } catch (error) {
     console.error('Failed to get audit logs:', error);
     throw new Error('Failed to retrieve audit logs');

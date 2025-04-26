@@ -13,6 +13,7 @@ import HomePage from "@/pages/home-page";
 import ScansPage from "@/pages/scans-page";
 import ScanDetailsPage from "@/pages/scan-details";
 import ReportPage from "@/pages/reports/[scanId]";
+import AdminPage from "@/pages/admin-page";
 import ScanWizard from "@/components/ScanWizard";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
           <ScanWizard />
         </div>
       )} />
+      <AdminRoute path="/admin" component={AdminPage} />
       <Route component={NotFound} />
     </Switch>
   );

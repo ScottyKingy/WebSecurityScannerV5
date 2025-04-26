@@ -1,232 +1,427 @@
 import express, { Request, Response } from 'express';
-import { requireAuth, requireAdmin } from '../middleware/auth';
 import { db } from '../db';
-import { users, creditsTransactions, roleTypes, tierOrder } from '@shared/schema';
-import { eq, desc, and, gte, lte, inArray, like } from 'drizzle-orm';
-import { grantCredits, chargeCredits } from '../lib/credits';
-import { z } from 'zod';
+import { users, creditsBalances, creditsTransactions } from '@shared/schema';
+import { requireAuth, requireAdmin } from '../middleware/auth';
+import { chargeCredits, grantCredits, getCreditBalance, hasUnlimitedCredits } from '../lib/credits';
+import { logAdminAction, getAuditLogs } from '../lib/audit';
+import { eq, desc } from 'drizzle-orm';
 
-const router = express.Router();
+// Create admin router
+export const adminRouter = express.Router();
 
-/**
- * Get all users with pagination and search
- * GET /api/admin/users
- */
-router.get('/users', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+// Apply admin authorization to all routes in this router
+adminRouter.use(requireAuth);
+adminRouter.use(requireAdmin);
+
+// Get all users
+adminRouter.get('/users', async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const search = req.query.search as string;
-    const offset = (page - 1) * limit;
+    // Get all users with their credit balances
+    const allUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        tier: users.tier,
+        createdAt: users.createdAt,
+        lastLogin: users.lastLogin,
+      })
+      .from(users);
     
-    let query = db.select().from(users);
+    // For each user, fetch their credit balance
+    const usersWithBalance = await Promise.all(
+      allUsers.map(async (user) => {
+        if (user.tier === 'enterprise') {
+          return {
+            ...user,
+            creditBalance: 'unlimited',
+            isEnterprise: true
+          };
+        }
+        
+        const balance = await getCreditBalance(user.id);
+        return {
+          ...user,
+          creditBalance: balance.currentBalance,
+          isEnterprise: false
+        };
+      })
+    );
     
-    // Apply search filter if provided
-    if (search) {
-      query = query.where(like(users.email, `%${search}%`));
-    }
+    // Log the admin action
+    await logAdminAction(req.user.id, 'list_users');
     
-    // Get total count for pagination
-    const totalQuery = db.select({ count: db.count() }).from(users);
-    if (search) {
-      totalQuery.where(like(users.email, `%${search}%`));
-    }
-    const [totalResult] = await totalQuery;
-    const total = totalResult?.count || 0;
-    
-    // Get paginated results
-    const results = await query
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(users.createdAt));
-    
-    res.json({
-      users: results,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    res.status(200).json(usersWithBalance);
   } catch (error) {
-    console.error('Error fetching admin users:', error);
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Failed to fetch users' });
   }
 });
 
-/**
- * Update user role and tier
- * PATCH /api/admin/users/:userId
- */
-router.patch('/users/:userId', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+// Get a specific user
+adminRouter.get('/users/:id', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const { id } = req.params;
     
-    // Validate input with Zod
-    const inputSchema = z.object({
-      role: z.enum(roleTypes as [string, ...string[]]).optional(),
-      tier: z.enum(tierOrder as [string, ...string[]]).optional(),
-    });
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
     
-    const validationResult = inputSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({ 
-        message: 'Invalid input', 
-        errors: validationResult.error.errors 
-      });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
     
-    const { role, tier } = validationResult.data;
+    // Log the admin action
+    await logAdminAction(req.user.id, 'view_user', { userId: id });
     
-    // Ensure at least one field is being updated
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Failed to fetch user' });
+  }
+});
+
+// Update a user's role or tier
+adminRouter.patch('/users/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { role, tier } = req.body;
+    
+    // Validate the update data
     if (!role && !tier) {
-      return res.status(400).json({ message: 'No fields to update' });
+      return res.status(400).json({ message: 'No update data provided' });
     }
     
-    // Get the user to update
-    const [existingUser] = await db.select().from(users).where(eq(users.id, parseInt(userId)));
+    // Check if user exists
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
     
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Build update object
-    const updateData: Partial<typeof users.$inferInsert> = {};
+    // Prepare update data
+    const updateData: any = {};
     if (role) updateData.role = role;
     if (tier) updateData.tier = tier;
     
     // Update the user
-    const [updatedUser] = await db
+    await db
       .update(users)
       .set(updateData)
-      .where(eq(users.id, parseInt(userId)))
-      .returning();
+      .where(eq(users.id, id));
     
-    // TODO: Log to audit trail
+    // Log the admin action
+    await logAdminAction(req.user.id, 'update_user', { 
+      userId: id, 
+      updates: updateData 
+    });
     
-    res.json({ user: updatedUser });
+    res.status(200).json({ message: 'User updated successfully' });
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ message: 'Failed to update user' });
   }
 });
 
-/**
- * Grant or deduct credits
- * POST /api/admin/credits/grant
- */
-router.post('/credits/grant', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+// Get user's credit balance
+adminRouter.get('/users/:id/credits', async (req: Request, res: Response) => {
   try {
-    // Validate input
-    const grantSchema = z.object({
-      userId: z.string(),
-      amount: z.number(),
-      reason: z.string().min(3).max(200)
-    });
-    
-    const validationResult = grantSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({ 
-        message: 'Invalid input', 
-        errors: validationResult.error.errors 
-      });
-    }
-    
-    const { userId, amount, reason } = validationResult.data;
+    const { id } = req.params;
     
     // Check if user exists
-    const [userExists] = await db.select().from(users).where(eq(users.id, parseInt(userId)));
-    if (!userExists) {
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
+    
+    if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Process the credit transaction
-    if (amount >= 0) {
-      // Grant credits
-      await grantCredits(userId, amount, 'admin_grant', { reason, adminId: req.user?.id });
-    } else {
-      // Deduct credits (amount is negative)
-      await chargeCredits(userId, Math.abs(amount), 'admin_deduction', { reason, adminId: req.user?.id });
+    // Check if user has unlimited credits (enterprise tier)
+    const isEnterprise = user.tier === 'enterprise';
+    
+    if (isEnterprise) {
+      return res.status(200).json({
+        userId: id,
+        currentBalance: 9999, // Placeholder for unlimited
+        isEnterprise: true
+      });
     }
     
-    // Return success
-    res.json({ 
-      success: true, 
-      message: `${amount >= 0 ? 'Granted' : 'Deducted'} ${Math.abs(amount)} credits ${amount >= 0 ? 'to' : 'from'} user ${userId}` 
+    // Get credit balance
+    const balance = await getCreditBalance(id);
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'view_credits', { userId: id });
+    
+    res.status(200).json({
+      ...balance,
+      isEnterprise: false
     });
   } catch (error) {
-    console.error('Error processing credit grant/deduction:', error);
-    res.status(500).json({ message: 'Failed to process credit action' });
+    console.error('Error fetching credit balance:', error);
+    res.status(500).json({ message: 'Failed to fetch credit balance' });
   }
 });
 
-/**
- * Get all credit transactions with filtering
- * GET /api/admin/transactions
- */
-router.get('/transactions', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+// Grant credits to a user
+adminRouter.post('/users/:id/credits/grant', async (req: Request, res: Response) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 25;
-    const userId = req.query.userId as string;
-    const type = req.query.type as string;
-    const startDate = req.query.startDate as string;
-    const endDate = req.query.endDate as string;
+    const { id } = req.params;
+    const { amount, note } = req.body;
     
-    const offset = (page - 1) * limit;
-    
-    // Build the query with filters
-    let query = db.select().from(creditsTransactions);
-    let conditions = [];
-    
-    if (userId) {
-      conditions.push(eq(creditsTransactions.userId, userId));
+    // Validate request
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res.status(400).json({ message: 'Invalid credit amount' });
     }
     
-    if (type) {
-      conditions.push(eq(creditsTransactions.type, type));
+    // Check if user exists
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
     
-    if (startDate) {
-      conditions.push(gte(creditsTransactions.createdAt, new Date(startDate)));
+    // Check if user has unlimited credits (enterprise tier)
+    if (user.tier === 'enterprise') {
+      return res.status(200).json({
+        message: 'Credits not granted - user has unlimited credits',
+        userId: id,
+        tier: user.tier
+      });
     }
     
-    if (endDate) {
-      conditions.push(lte(creditsTransactions.createdAt, new Date(endDate)));
-    }
-    
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    // Get total count for pagination
-    const [totalResult] = await db
-      .select({ count: db.count() })
-      .from(creditsTransactions)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
-      
-    const total = totalResult?.count || 0;
-    
-    // Get paginated results
-    const transactions = await query
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(creditsTransactions.createdAt));
-    
-    res.json({
-      transactions,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
+    // Grant credits
+    await grantCredits(id, Number(amount), 'admin_grant', { 
+      adminId: req.user.id,
+      note: note || 'Admin grant'
     });
+    
+    // Get updated balance
+    const balance = await getCreditBalance(id);
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'grant_credits', { 
+      userId: id, 
+      amount: Number(amount),
+      note: note || 'Admin grant'
+    });
+    
+    res.status(200).json({
+      message: 'Credits granted successfully',
+      userId: id,
+      amount: Number(amount),
+      currentBalance: balance.currentBalance
+    });
+  } catch (error) {
+    console.error('Error granting credits:', error);
+    res.status(500).json({ message: 'Failed to grant credits' });
+  }
+});
+
+// Deduct credits from a user
+adminRouter.post('/users/:id/credits/deduct', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount, note } = req.body;
+    
+    // Validate request
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res.status(400).json({ message: 'Invalid credit amount' });
+    }
+    
+    // Check if user exists
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Check if user has unlimited credits (enterprise tier)
+    if (user.tier === 'enterprise') {
+      return res.status(200).json({
+        message: 'Credits not deducted - user has unlimited credits',
+        userId: id,
+        tier: user.tier
+      });
+    }
+    
+    // Get current balance
+    const balance = await getCreditBalance(id);
+    
+    // Check if user has enough credits
+    if (balance.currentBalance < Number(amount)) {
+      return res.status(400).json({
+        message: 'Insufficient credits',
+        userId: id,
+        currentBalance: balance.currentBalance,
+        requestedAmount: Number(amount)
+      });
+    }
+    
+    // Deduct credits
+    await chargeCredits(id, Number(amount), 'admin_deduct', {
+      adminId: req.user.id,
+      note: note || 'Admin deduction'
+    });
+    
+    // Get updated balance
+    const updatedBalance = await getCreditBalance(id);
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'deduct_credits', {
+      userId: id,
+      amount: Number(amount),
+      note: note || 'Admin deduction'
+    });
+    
+    res.status(200).json({
+      message: 'Credits deducted successfully',
+      userId: id,
+      amount: Number(amount),
+      currentBalance: updatedBalance.currentBalance
+    });
+  } catch (error) {
+    console.error('Error deducting credits:', error);
+    res.status(500).json({ message: 'Failed to deduct credits' });
+  }
+});
+
+// Get credit transactions for a user
+adminRouter.get('/users/:id/credits/transactions', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    
+    // Check if user exists
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then(rows => rows[0]);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Get transactions
+    const transactions = await db
+      .select()
+      .from(creditsTransactions)
+      .where(eq(creditsTransactions.userId, id))
+      .orderBy(desc(creditsTransactions.createdAt))
+      .limit(Number(limit))
+      .offset(Number(offset));
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'view_transactions', { userId: id });
+    
+    res.status(200).json(transactions);
   } catch (error) {
     console.error('Error fetching transactions:', error);
     res.status(500).json({ message: 'Failed to fetch transactions' });
   }
 });
 
-export default router;
+// Get audit logs with optional filtering
+adminRouter.get('/audit-logs', async (req: Request, res: Response) => {
+  try {
+    const {
+      userId,
+      action,
+      startDate,
+      endDate,
+      limit = 50,
+      offset = 0
+    } = req.query;
+    
+    // Convert query params to the right types
+    const params: any = {
+      limit: Number(limit),
+      offset: Number(offset)
+    };
+    
+    if (userId) params.userId = userId as string;
+    if (action) params.action = action as string;
+    if (startDate) params.startDate = new Date(startDate as string);
+    if (endDate) params.endDate = new Date(endDate as string);
+    
+    // Get audit logs
+    const logs = await getAuditLogs(params);
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'view_audit_logs', { filters: params });
+    
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching audit logs:', error);
+    res.status(500).json({ message: 'Failed to fetch audit logs' });
+  }
+});
+
+// Get system statistics for admin dashboard
+adminRouter.get('/stats', async (req: Request, res: Response) => {
+  try {
+    // Count total users
+    const [{ count: totalUsers }] = await db
+      .select({
+        count: db.fn.count(users.id)
+      })
+      .from(users);
+    
+    // Count users by tier
+    const usersByTier = await db
+      .select({
+        tier: users.tier,
+        count: db.fn.count(users.id)
+      })
+      .from(users)
+      .groupBy(users.tier);
+    
+    // Count users by role
+    const usersByRole = await db
+      .select({
+        role: users.role,
+        count: db.fn.count(users.id)
+      })
+      .from(users)
+      .groupBy(users.role);
+    
+    // Get total credits issued
+    const [{ sum: totalCreditsIssued }] = await db
+      .select({
+        sum: db.fn.sum(creditsTransactions.amount)
+      })
+      .from(creditsTransactions)
+      .where(eq(creditsTransactions.type, 'admin_grant'));
+    
+    // Log the admin action
+    await logAdminAction(req.user.id, 'view_admin_stats');
+    
+    res.status(200).json({
+      totalUsers,
+      usersByTier,
+      usersByRole,
+      totalCreditsIssued: totalCreditsIssued || 0
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({ message: 'Failed to fetch admin statistics' });
+  }
+});

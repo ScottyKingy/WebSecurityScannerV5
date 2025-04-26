@@ -5,7 +5,7 @@ import creditsRoutes from './routes/credits';
 import scanRoutes from './routes/scan';
 import scanStatusRoutes from './routes/scanStatus';
 import scannersRoutes from './routes/scanners';
-import adminRoutes from './routes/admin';
+import { adminRouter as adminRoutes } from './routes/admin';
 import { ensureTablesExist } from './db';
 import { db } from './db';
 import { users } from '@shared/schema';
