@@ -4,7 +4,7 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "../lib/queryClient";
+import { apiRequest, queryClient, setAuthToken, removeAuthToken } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type User = {
@@ -111,11 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return await res.json();
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data) => {
+      // Store the token in local storage
+      if (data.accessToken) {
+        setAuthToken(data.accessToken);
+      }
+      
+      // Store user data in the query cache
+      queryClient.setQueryData(["/api/user"], data.user);
+      
       toast({
         title: "Registration successful",
-        description: `Welcome, ${user.email}!`,
+        description: `Welcome, ${data.user.email}!`,
       });
     },
     onError: (error: Error) => {
@@ -136,8 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     onSuccess: () => {
+      // Remove auth token from storage
+      removeAuthToken();
+      
+      // Clear user data from cache
       queryClient.setQueryData(["/api/user"], null);
       queryClient.invalidateQueries();
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
