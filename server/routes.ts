@@ -4,6 +4,7 @@ import authRoutes from './routes/auth';
 import creditsRoutes from './routes/credits';
 import scanRoutes from './routes/scan';
 import scanStatusRoutes from './routes/scanStatus';
+import scannersRoutes from './routes/scanners';
 import { ensureTablesExist } from './db';
 import { db } from './db';
 import { users } from '@shared/schema';
