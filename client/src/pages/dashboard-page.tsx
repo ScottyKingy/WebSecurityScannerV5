@@ -45,6 +45,12 @@ export default function DashboardPage() {
     }
     return parts[0].substring(0, 2).toUpperCase();
   };
+  
+  // Get user tier with fallback to prevent errors
+  const getUserTier = () => {
+    if (!user?.tier) return "Lite";
+    return user.tier.charAt(0).toUpperCase() + user.tier.slice(1);
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -67,7 +73,7 @@ export default function DashboardPage() {
                   Reports
                 </a>
                 {user?.role === 'admin' && (
-                  <a href="#" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  <a href="/admin" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                     Admin
                   </a>
                 )}
@@ -86,7 +92,7 @@ export default function DashboardPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
                     <path d="m12 8-9.04.07m0 0-.12 1.21a1.3 1.3 0 0 0 2.29.86L12 3m0 5v8m0-8 9.04.07m0 0 .12 1.21a1.3 1.3 0 0 1-2.29.86L12 3m0 13 6.87 6.87a1.3 1.3 0 0 0 2.29-.86l.12-1.21M12 16l-9.04.07m0 0-.12 1.21a1.3 1.3 0 0 1-2.29-.86L12 21"/>
                   </svg>
-                  <span>{user?.tier.charAt(0).toUpperCase() + user?.tier.slice(1)}</span>
+                  <span>{getUserTier()}</span>
                 </Button>
                 
                 {/* Credits balance */}
@@ -96,7 +102,7 @@ export default function DashboardPage() {
                   size="sm"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  <span>{user?.creditsBalance?.amount || creditsBalance?.amount || 0} credits</span>
+                  <span>{creditsBalance?.currentBalance || 0} credits</span>
                 </Button>
                 
                 {/* Profile dropdown */}
