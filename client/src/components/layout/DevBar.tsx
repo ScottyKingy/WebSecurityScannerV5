@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,62 +18,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
-// Context for Dev Bar visibility
-type DevBarContextType = {
-  isVisible: boolean;
-  toggleVisibility: () => void;
-};
-
-const DevBarContext = createContext<DevBarContextType | null>(null);
-
-export function DevBarProvider({ children }: { children: ReactNode }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const { user } = useAuth();
-  const [isDevEnvironment, setIsDevEnvironment] = useState(false);
-
-  useEffect(() => {
-    // Check if we're in a development environment (replit)
-    const isDev = window.location.hostname.includes('replit');
-    setIsDevEnvironment(isDev);
-    
-    // Listen for keyboard shortcut (Ctrl+Shift+D)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        setIsVisible(prev => !prev);
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  // Only show the dev bar if in development environment and user is admin
-  const isAdmin = user?.role === 'admin' && user.email === 'admin@example.com';
-  const shouldShowDevBar = isDevEnvironment && isAdmin;
-
-  const toggleVisibility = () => {
-    setIsVisible(prev => !prev);
-  };
-
-  return (
-    <DevBarContext.Provider value={{ isVisible, toggleVisibility }}>
-      {shouldShowDevBar && isVisible && <DevBar />}
-      {children}
-    </DevBarContext.Provider>
-  );
-}
-
-export function useDevBar() {
-  const context = useContext(DevBarContext);
-  if (!context) {
-    throw new Error('useDevBar must be used within a DevBarProvider');
-  }
-  return context;
-}
-
-function DevBar() {
+export function DevBar() {
   const { user, refetch } = useAuth();
   const [selectedTier, setSelectedTier] = useState(user?.tier || 'lite');
   const [creditAmount, setCreditAmount] = useState(10);
