@@ -99,6 +99,23 @@ export const insertScanSchema = createInsertSchema(scans).omit({
   updatedAt: true,
 });
 
+// Scan Results model
+export const scanResults = pgTable("scan_results", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scanId: uuid("scan_id").notNull().references(() => scans.id, { onDelete: "cascade" }),
+  scannerKey: text("scanner_key").notNull(),
+  score: integer("score").notNull(),
+  outputJson: text("output_json").notNull(), // Storing as JSON string
+  promptLog: text("prompt_log"), // Optional raw prompt + GPT output
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schema for scan results
+export const insertScanResultSchema = createInsertSchema(scanResults).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -107,3 +124,5 @@ export type CreditsTransaction = typeof creditsTransactions.$inferSelect;
 export type Token = typeof tokens.$inferSelect;
 export type Scan = typeof scans.$inferSelect;
 export type InsertScan = z.infer<typeof insertScanSchema>;
+export type ScanResult = typeof scanResults.$inferSelect;
+export type InsertScanResult = z.infer<typeof insertScanResultSchema>;

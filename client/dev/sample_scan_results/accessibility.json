@@ -1,0 +1,102 @@
+{
+  "score": 65,
+  "percentile_contribution": 0.20,
+  "summary": "The page has significant accessibility issues that should be addressed to improve usability for all users.",
+  "details": "Several WCAG 2.1 compliance issues were identified, including color contrast problems, missing form labels, and keyboard navigation challenges. These issues impact users with visual impairments, motor disabilities, and those using assistive technologies.",
+  "issues": [
+    {
+      "id": "CONTRAST-INSUFFICIENT",
+      "title": "Insufficient color contrast",
+      "description": "Multiple text elements fail to meet the WCAG AA contrast ratio of 4.5:1 for normal text and 3:1 for large text.",
+      "severity": "critical",
+      "impact_area": ["Accessibility", "Visual Impairment"],
+      "effort_estimate": "medium",
+      "recommendation": "Increase the contrast ratio between text and background colors to meet WCAG AA standards."
+    },
+    {
+      "id": "FORM-LABELS-MISSING",
+      "title": "Missing form labels",
+      "description": "Several form inputs lack proper label associations, making them difficult to use with screen readers.",
+      "severity": "high",
+      "impact_area": ["Accessibility", "Screen Readers"],
+      "effort_estimate": "low",
+      "recommendation": "Add explicit <label> elements with 'for' attributes that match input IDs."
+    },
+    {
+      "id": "LANDMARK-REGIONS-MISSING",
+      "title": "Missing ARIA landmark regions",
+      "description": "The page lacks proper ARIA landmark regions, making it difficult for screen reader users to navigate.",
+      "severity": "medium",
+      "impact_area": ["Accessibility", "Screen Readers"],
+      "effort_estimate": "low",
+      "recommendation": "Add appropriate ARIA landmark roles to main page sections (header, nav, main, footer)."
+    },
+    {
+      "id": "FOCUS-ORDER-ILLOGICAL",
+      "title": "Illogical keyboard focus order",
+      "description": "The tab order does not follow a logical sequence, creating confusion for keyboard users.",
+      "severity": "high",
+      "impact_area": ["Accessibility", "Keyboard Navigation"],
+      "effort_estimate": "medium",
+      "recommendation": "Restructure the tab order to follow a logical visual sequence from top to bottom, left to right."
+    },
+    {
+      "id": "ALT-TEXT-MISSING",
+      "title": "Missing alt text on images",
+      "description": "Several images lack alternative text, making them inaccessible to screen reader users.",
+      "severity": "high",
+      "impact_area": ["Accessibility", "Screen Readers"],
+      "effort_estimate": "low",
+      "recommendation": "Add descriptive alt text to all images, or empty alt attributes for decorative images."
+    }
+  ],
+  "remediation_plan": [
+    {
+      "title": "Fix color contrast issues",
+      "category": "Visual Accessibility",
+      "impact_score": 9,
+      "effort_score": 5,
+      "priority": "high"
+    },
+    {
+      "title": "Add missing form labels",
+      "category": "Form Accessibility",
+      "impact_score": 8,
+      "effort_score": 3,
+      "priority": "high"
+    },
+    {
+      "title": "Add ARIA landmarks",
+      "category": "Screen Reader Support",
+      "impact_score": 7,
+      "effort_score": 2,
+      "priority": "medium"
+    },
+    {
+      "title": "Fix keyboard navigation",
+      "category": "Keyboard Accessibility",
+      "impact_score": 8,
+      "effort_score": 6,
+      "priority": "high"
+    },
+    {
+      "title": "Add image alt text",
+      "category": "Screen Reader Support",
+      "impact_score": 7,
+      "effort_score": 3,
+      "priority": "high"
+    }
+  ],
+  "charts": {
+    "type": "bar",
+    "data": {
+      "labels": ["Perceivable", "Operable", "Understandable", "Robust"],
+      "values": [6.5, 5.8, 7.2, 6.0]
+    }
+  },
+  "metadata": {
+    "scanner_key": "accessibility",
+    "scanner_version": "v1.0",
+    "executed_at": "2025-04-27T10:20:15Z"
+  }
+}

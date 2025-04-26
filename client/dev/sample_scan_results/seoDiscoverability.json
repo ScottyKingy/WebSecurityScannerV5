@@ -1,0 +1,86 @@
+{
+  "score": 72,
+  "percentile_contribution": 0.22,
+  "summary": "The page has moderate SEO optimization with several areas for improvement.",
+  "details": "While basic SEO elements are present, the page lacks optimized meta descriptions and has issues with keyword density and placement. Image alt text is missing in several locations, and the URL structure could be improved for better search engine discoverability.",
+  "issues": [
+    {
+      "id": "META-DESCRIPTION-GENERIC",
+      "title": "Generic meta description",
+      "description": "The meta description is too generic and doesn't include relevant keywords for the content.",
+      "severity": "high",
+      "impact_area": ["SEO", "Click-through Rate"],
+      "effort_estimate": "low",
+      "recommendation": "Create a unique, descriptive meta description with relevant keywords that accurately summarizes the page content."
+    },
+    {
+      "id": "IMG-ALT-MISSING",
+      "title": "Missing image alt text",
+      "description": "Multiple images on the page lack alt text, reducing both accessibility and SEO value.",
+      "severity": "medium",
+      "impact_area": ["SEO", "Accessibility"],
+      "effort_estimate": "medium",
+      "recommendation": "Add descriptive alt text to all images that includes relevant keywords where appropriate."
+    },
+    {
+      "id": "URL-STRUCTURE-SUBOPTIMAL",
+      "title": "Suboptimal URL structure",
+      "description": "The URL contains ID numbers instead of descriptive keywords, reducing SEO value.",
+      "severity": "medium",
+      "impact_area": ["SEO", "User Experience"],
+      "effort_estimate": "high",
+      "recommendation": "Restructure URLs to use descriptive keywords instead of ID numbers."
+    },
+    {
+      "id": "KEYWORD-DENSITY-LOW",
+      "title": "Low keyword density",
+      "description": "Primary keywords appear less frequently than recommended for optimal SEO.",
+      "severity": "medium",
+      "impact_area": ["SEO"],
+      "effort_estimate": "medium",
+      "recommendation": "Increase keyword density to 1-2% by naturally incorporating key terms throughout the content."
+    }
+  ],
+  "remediation_plan": [
+    {
+      "title": "Optimize meta tags",
+      "category": "Technical SEO",
+      "impact_score": 8,
+      "effort_score": 2,
+      "priority": "high"
+    },
+    {
+      "title": "Add missing alt text",
+      "category": "Content Optimization",
+      "impact_score": 7,
+      "effort_score": 4,
+      "priority": "high"
+    },
+    {
+      "title": "Improve keyword usage",
+      "category": "Content Optimization",
+      "impact_score": 6,
+      "effort_score": 5,
+      "priority": "medium"
+    },
+    {
+      "title": "Restructure URLs",
+      "category": "Technical SEO",
+      "impact_score": 7,
+      "effort_score": 7,
+      "priority": "medium"
+    }
+  ],
+  "charts": {
+    "type": "radar",
+    "data": {
+      "labels": ["Meta Tags", "Content Quality", "Keywords", "URL Structure", "Image Optimization", "Internal Linking"],
+      "values": [5.5, 7.8, 6.2, 5.0, 4.8, 7.2]
+    }
+  },
+  "metadata": {
+    "scanner_key": "seoDiscoverability",
+    "scanner_version": "v1.0",
+    "executed_at": "2025-04-27T10:18:30Z"
+  }
+}

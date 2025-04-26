@@ -1,0 +1,143 @@
+### 🧱 Feature ID 7: JSON Output Schema for Scanner Results (Express.js + Prisma)
+
+---
+
+### 🎯 Purpose
+Define the consistent shape and structure of scan result data returned by each scanner (LLM or static). Output should:
+- Be schema-validated before saving
+- Support UI rendering across all scan report cards
+- Include score, issues, recommendations, charts, metadata
+
+---
+
+### ✅ Prompt 7.1 — Define Scanner Result Prisma Schema
+
+Add to `/prisma/schema.prisma`:
+```prisma
+model ScanResult {
+  id            String   @id @default(uuid())
+  scanId        String
+  scannerKey    String
+  score         Int
+  outputJson    Json     // full structured result
+  promptLog     Json?    // raw prompt + GPT output (optional)
+  createdAt     DateTime @default(now())
+  scan          Scan     @relation(fields: [scanId], references: [id])
+}
+```
+
+- One result per `scanId + scannerKey`
+- Use this data for visualisations and AI drilldowns
+
+---
+
+### ✅ Prompt 7.2 — Output Schema Format (JSON Shape)
+
+Each scanner result should follow this shape inside `outputJson`:
+```json
+{
+  "score": 87,
+  "percentile_contribution": 0.18,
+  "summary": "Content structure is well-formed overall.",
+  "details": "The page uses a logical H1-H3 hierarchy with semantic regions...",
+  "issues": [
+    {
+      "id": "STRUCTURE-H2-MISSING",
+      "title": "Missing H2 under main section",
+      "description": "No H2 found within main article content",
+      "severity": "medium",
+      "impact_area": ["AI Readiness", "Accessibility"],
+      "effort_estimate": "low",
+      "recommendation": "Add an H2 heading under the article section."
+    }
+  ],
+  "remediation_plan": [
+    {
+      "title": "Add logical sub-headings",
+      "category": "Content Structure",
+      "impact_score": 7,
+      "effort_score": 2,
+      "priority": "high"
+    }
+  ],
+  "charts": {
+    "type": "bar",
+    "data": {
+      "labels": ["Passed", "Warnings", "Failed"],
+      "values": [12, 4, 2]
+    }
+  },
+  "metadata": {
+    "scanner_key": "contentContextualisation",
+    "scanner_version": "v1.0",
+    "executed_at": "2025-04-27T10:15:00Z"
+  }
+}
+```
+
+---
+
+### ✅ Prompt 7.3 — Schema Validator
+
+Create `/server/utils/validateScanResult.ts`:
+```ts
+import { z } from "zod";
+
+export const ScanResultSchema = z.object({
+  score: z.number().min(0).max(100),
+  percentile_contribution: z.number().min(0).max(1),
+  summary: z.string(),
+  details: z.string(),
+  issues: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    severity: z.enum(["low", "medium", "high", "critical"]),
+    impact_area: z.array(z.string()),
+    effort_estimate: z.enum(["low", "medium", "high"]),
+    recommendation: z.string()
+  })),
+  remediation_plan: z.array(z.object({
+    title: z.string(),
+    category: z.string(),
+    impact_score: z.number(),
+    effort_score: z.number(),
+    priority: z.enum(["low", "medium", "high"])
+  })),
+  charts: z.object({
+    type: z.string(),
+    data: z.record(z.any())
+  }),
+  metadata: z.object({
+    scanner_key: z.string(),
+    scanner_version: z.string(),
+    executed_at: z.string()
+  })
+});
+
+export function validateScanOutput(data: any) {
+  return ScanResultSchema.parse(data);
+}
+```
+
+Use inside queue worker (Feature 8) before writing result to DB.
+
+---
+
+### ✅ Prompt 7.4 — Static Sample Files for Dev Mode
+
+Add to `/client/dev/sample_scan_results/`:
+- `contentContextualisation.json`
+- `accessibility.json`
+- `seoDiscoverability.json`
+
+Each file should match the output schema and serve:
+- Preview-only mode (for restricted tiers)
+- Dev testing of report cards before scan completion
+
+---
+
+### 🧠 Notes
+- Always validate result shape before saving to DB
+- Include `scanner_key` as required param in all result-related APIs
+- Use raw prompt data (GPT) to populate dev-mode JSON viewer

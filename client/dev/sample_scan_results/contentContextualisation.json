@@ -1,0 +1,61 @@
+{
+  "score": 87,
+  "percentile_contribution": 0.18,
+  "summary": "Content structure is well-formed overall with good semantic organization.",
+  "details": "The page uses a logical H1-H3 hierarchy with semantic regions. The main content is properly organized, but there are a few areas where the content structure could be improved for better clarity and accessibility.",
+  "issues": [
+    {
+      "id": "STRUCTURE-H2-MISSING",
+      "title": "Missing H2 under main section",
+      "description": "No H2 found within main article content, which may impact content hierarchy and accessibility.",
+      "severity": "medium",
+      "impact_area": ["AI Readability", "Accessibility"],
+      "effort_estimate": "low",
+      "recommendation": "Add an H2 heading under the article section to properly structure the content hierarchy."
+    },
+    {
+      "id": "SEMANTIC-SECTION-UNDEFINED",
+      "title": "Undefined semantic section",
+      "description": "The page contains a div with content that should be in a semantic element like article, section, or aside.",
+      "severity": "low",
+      "impact_area": ["SEO", "Accessibility"],
+      "effort_estimate": "low",
+      "recommendation": "Replace generic div containers with semantic HTML5 elements where appropriate."
+    }
+  ],
+  "remediation_plan": [
+    {
+      "title": "Add logical sub-headings",
+      "category": "Content Structure",
+      "impact_score": 7,
+      "effort_score": 2,
+      "priority": "high"
+    },
+    {
+      "title": "Use semantic HTML elements",
+      "category": "Accessibility",
+      "impact_score": 6,
+      "effort_score": 3,
+      "priority": "medium"
+    },
+    {
+      "title": "Improve content organization",
+      "category": "User Experience",
+      "impact_score": 5,
+      "effort_score": 4,
+      "priority": "medium"
+    }
+  ],
+  "charts": {
+    "type": "bar",
+    "data": {
+      "labels": ["Semantic Structure", "Heading Hierarchy", "Content Flow", "Contextual Relevance"],
+      "values": [8.5, 7.2, 9.0, 8.8]
+    }
+  },
+  "metadata": {
+    "scanner_key": "contentContextualisation",
+    "scanner_version": "v1.0",
+    "executed_at": "2025-04-27T10:15:00Z"
+  }
+}
