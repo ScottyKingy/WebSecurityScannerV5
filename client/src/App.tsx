@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute, AdminRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/useAuth";
+import { DevBarProvider } from "./hooks/useDevBar";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
@@ -40,9 +41,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        {/* Include AuthProvider directly in App for proper context nesting */}
+        {/* Include AuthProvider and DevBarProvider */}
         <AuthProvider>
-          <Router />
+          <DevBarProvider>
+            <Router />
+          </DevBarProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,0 +1,126 @@
+### 🧱 Feature ID 11: Aggregated Insight Cards – Issue Summary, Remediation Roadmap, Site History
+
+---
+
+### 🎯 Purpose
+Create modular cards that:
+- Summarise cross-scanner issues
+- Recommend prioritised fixes (Impact vs Effort)
+- Show historical score trends
+- Power overview insights for business users and remediation teams
+
+---
+
+### ✅ Prompt 11.1 — OverallIssueSummaryCard Component
+
+File: `/client/components/report/cards/OverallIssueSummaryCard.tsx`
+
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { IssueList } from '@/components/report/IssueList';
+
+export function OverallIssueSummaryCard({ issues }) {
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Overall Issues Summary</h2>
+      </CardHeader>
+      <CardContent>
+        <IssueList issues={issues} />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+Data Format:
+- Flattened array of issues from all scanners
+- Grouped by severity (critical > high > medium > low)
+
+---
+
+### ✅ Prompt 11.2 — OverallRemediationRoadmapCard Component
+
+File: `/client/components/report/cards/OverallRemediationRoadmapCard.tsx`
+
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { RemediationChart } from '@/components/charts/RemediationChart';
+
+export function OverallRemediationRoadmapCard({ roadmap }) {
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Remediation Roadmap</h2>
+      </CardHeader>
+      <CardContent>
+        <RemediationChart data={roadmap} />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+Chart:
+- Interactive scatter plot or bubble chart:
+  - x-axis: Effort
+  - y-axis: Impact
+  - Bubble size: Priority/Weight
+- Use Chart.js
+
+---
+
+### ✅ Prompt 11.3 — SiteHistorySummaryCard Component
+
+File: `/client/components/report/cards/SiteHistorySummaryCard.tsx`
+
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { LineChart } from '@/components/charts/LineChart';
+
+export function SiteHistorySummaryCard({ history }) {
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Historical Performance</h2>
+      </CardHeader>
+      <CardContent>
+        <LineChart data={history} />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+Data Format:
+- Array of `{ scanDate, overallScore }`
+- Line chart showing score improvement (or regression) over time
+
+---
+
+### ✅ Prompt 11.4 — Card Registration
+
+Update `/client/components/report/CardRenderer.tsx`:
+```tsx
+import { OverallIssueSummaryCard } from './cards/OverallIssueSummaryCard';
+import { OverallRemediationRoadmapCard } from './cards/OverallRemediationRoadmapCard';
+import { SiteHistorySummaryCard } from './cards/SiteHistorySummaryCard';
+
+const cardMap = {
+  ...
+  overallIssues: OverallIssueSummaryCard,
+  remediationRoadmap: OverallRemediationRoadmapCard,
+  siteHistory: SiteHistorySummaryCard
+};
+```
+
+Card Injection:
+- These are virtual scannerKeys calculated from aggregation, not raw scanner outputs.
+
+---
+
+### 🧠 Dev Tips
+- Allow roadmap click -> auto-scroll to issue in IssueList
+- Show delta % score change in history card
+- Tooltip over points in Remediation Chart explaining effort vs impact rating
+- Enable export of issue list + roadmap to CSV (future)

@@ -1,30 +1,24 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { createContext, useState, useContext, ReactNode } from 'react';
 
 interface DevBarContextType {
   devMode: boolean;
   toggleDevMode: () => void;
 }
 
-const DevBarContext = createContext<DevBarContextType | undefined>(undefined);
+// Create the context with default values
+const DevBarContext = createContext<DevBarContextType>({
+  devMode: false,
+  toggleDevMode: () => {},
+});
 
+// Define the provider component
 export function DevBarProvider({ children }: { children: ReactNode }) {
-  const [devMode, setDevMode] = useState(false);
-
-  // Check for dev mode in URL or localStorage
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const devModeParam = searchParams.get('devmode');
-    const savedDevMode = localStorage.getItem('webscanner_devmode');
-    
-    if (devModeParam === 'true' || savedDevMode === 'true') {
-      setDevMode(true);
-    }
-  }, []);
+  const [devMode, setDevMode] = useState<boolean>(
+    process.env.NODE_ENV === 'development'
+  );
 
   const toggleDevMode = () => {
-    const newMode = !devMode;
-    setDevMode(newMode);
-    localStorage.setItem('webscanner_devmode', newMode.toString());
+    setDevMode((prev) => !prev);
   };
 
   return (
@@ -34,12 +28,11 @@ export function DevBarProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useDevBar(): DevBarContextType {
+// Custom hook to use the context
+export function useDevBar() {
   const context = useContext(DevBarContext);
-  
   if (context === undefined) {
     throw new Error('useDevBar must be used within a DevBarProvider');
   }
-  
   return context;
 }

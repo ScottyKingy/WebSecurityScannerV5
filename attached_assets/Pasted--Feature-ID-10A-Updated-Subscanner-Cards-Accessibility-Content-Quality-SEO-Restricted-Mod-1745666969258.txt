@@ -1,0 +1,155 @@
+### 🧱 Feature ID 10A: Updated Subscanner Cards (Accessibility, Content Quality, SEO, Restricted Mode)
+
+---
+
+### 🎯 Purpose
+Implement updated scanner cards:
+- Dynamic import compatible (Auto-Registry)
+- DevMode diagnostics enabled
+- Restricted/Preview scan support
+- Add missing SEOCard
+
+---
+
+### ✅ Prompt 10.1 — AccessibilityCard Component
+
+File: `/client/components/report/cards/AccessibilityCard.tsx`
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { BarChart } from '@/components/charts/BarChart';
+import { useDevBar } from '@/hooks/useDevBar';
+import { AskAIButton } from '@/components/report/AskAIButton';
+import { DevModeModal } from '@/components/dev/DevModeModal';
+
+export function AccessibilityCard({ data, scanId, restricted = false }) {
+  const { devMode } = useDevBar();
+  const { score = 0, summary = "", details = "", issues = [], charts = {} } = data;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Accessibility Readiness</h2>
+        <span className="badge bg-yellow-500 text-white">{score}/100</span>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BarChart data={charts.data} />
+        <div>
+          <p className="text-muted-foreground mb-3">{restricted ? "Upgrade to view full WCAG issues." : summary}</p>
+          {!restricted && issues.map((issue, idx) => (
+            <div key={idx} className="text-xs mb-2">• {issue.title}</div>
+          ))}
+          <div className="flex gap-2 mt-4">
+            {!restricted && <AskAIButton scanId={scanId} scannerKey="accessibility" />}
+            {devMode && <DevModeModal scanId={scanId} scannerKey="accessibility" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+---
+
+### ✅ Prompt 10.2 — ContentQualityCard Component
+
+File: `/client/components/report/cards/ContentQualityCard.tsx`
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { RadarChart } from '@/components/charts/RadarChart';
+import { RecommendationList } from '@/components/report/RecommendationList';
+import { useDevBar } from '@/hooks/useDevBar';
+import { AskAIButton } from '@/components/report/AskAIButton';
+import { DevModeModal } from '@/components/dev/DevModeModal';
+
+export function ContentQualityCard({ data, scanId, restricted = false }) {
+  const { devMode } = useDevBar();
+  const { score = 0, summary = "", remediation_plan = [], charts = {} } = data;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">Content Quality</h2>
+        <span className="badge bg-blue-500 text-white">{score}/100</span>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <RadarChart data={charts.data} />
+        <div>
+          <p className="text-muted-foreground mb-3">{restricted ? "Upgrade to view full content insights." : summary}</p>
+          {!restricted && <RecommendationList items={remediation_plan} />}
+          <div className="flex gap-2 mt-4">
+            {!restricted && <AskAIButton scanId={scanId} scannerKey="contentQuality" />}
+            {devMode && <DevModeModal scanId={scanId} scannerKey="contentQuality" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+---
+
+### ✅ Prompt 10.3 — SEOCard Component (New)
+
+File: `/client/components/report/cards/SEODiscoverabilityCard.tsx`
+```tsx
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { BarChart } from '@/components/charts/BarChart';
+import { useDevBar } from '@/hooks/useDevBar';
+import { AskAIButton } from '@/components/report/AskAIButton';
+import { DevModeModal } from '@/components/dev/DevModeModal';
+
+export function SEODiscoverabilityCard({ data, scanId, restricted = false }) {
+  const { devMode } = useDevBar();
+  const { score = 0, summary = "", issues = [], charts = {} } = data;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-lg font-semibold">SEO Readiness</h2>
+        <span className="badge bg-indigo-600 text-white">{score}/100</span>
+      </CardHeader>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <BarChart data={charts.data} />
+        <div>
+          <p className="text-muted-foreground mb-3">{restricted ? "Upgrade to unlock full SEO scan results." : summary}</p>
+          {!restricted && issues.map((issue, idx) => (
+            <div key={idx} className="text-xs mb-2">• {issue.title}</div>
+          ))}
+          <div className="flex gap-2 mt-4">
+            {!restricted && <AskAIButton scanId={scanId} scannerKey="seoDiscoverability" />}
+            {devMode && <DevModeModal scanId={scanId} scannerKey="seoDiscoverability" />}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+---
+
+### 🧠 Dev Notes
+- All cards must export with `{ data, scanId, restricted }` props
+- All cards must tolerate dummy preview data without crashing
+- DevMode modal must always be accessible in dev environment
+- Restricted cards must block real API interactions (no live AskAI if restricted)
+- Card filenames must match scannerKey → Auto-Registry naming pattern
+
+---
+
+### 📋 REPLIT Coder Instructions (Copy & Paste Block)
+
+**Copy & Paste Start:**
+```
+- Create `/client/components/report/cards/AccessibilityCard.tsx`
+- Create `/client/components/report/cards/ContentQualityCard.tsx`
+- Create `/client/components/report/cards/SEODiscoverabilityCard.tsx`
+- Follow dynamic import structure (scannerKey → CardName matching)
+- Support props: { data, scanId, restricted }
+- Integrate DevMode and AskAI correctly
+```
+**Copy & Paste End.**
+
+✅ ID10A Complete — Full upgrade to dynamic cards, DevMode, and Restricted Preview Mode.
