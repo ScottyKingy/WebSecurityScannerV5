@@ -18,7 +18,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
-export function DevBar() {
+export default function DevBar() {
   const { user, refetch } = useAuth();
   const [selectedTier, setSelectedTier] = useState(user?.tier || 'lite');
   const [creditAmount, setCreditAmount] = useState(10);

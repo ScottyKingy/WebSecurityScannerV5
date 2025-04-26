@@ -14,7 +14,7 @@ import {
 import { LogOut, User, CreditCard } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
-export function Navbar() {
+export default function Navbar() {
   const { user, isLoading, logoutMutation } = useAuth();
   const [location] = useLocation();
   
