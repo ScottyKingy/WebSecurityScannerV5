@@ -345,9 +345,12 @@ export default function ScanDetailsPage() {
                 ) : (
                   <div className="bg-muted rounded-md p-6 text-center">
                     <h3 className="text-lg font-semibold">Scan Complete</h3>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      This is a placeholder for scan results. In a real implementation, this would display detailed analysis results.
+                    <p className="text-sm text-muted-foreground mt-2 mb-4">
+                      View the detailed report to see all scanner results and analysis.
                     </p>
+                    <Button onClick={() => navigate(`/reports/${scanId}`)}>
+                      View Detailed Report
+                    </Button>
                   </div>
                 )}
               </TabsContent>

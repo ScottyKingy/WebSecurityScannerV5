@@ -1,12 +1,19 @@
-import { useAuth } from './useAuth';
+import { useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
 export function useSession() {
-  const { user, isLoading } = useAuth();
+  const auth = useContext(AuthContext);
+  
+  if (!auth) {
+    throw new Error("useSession must be used within an AuthProvider");
+  }
+  
+  const { user, isLoading, isAuthenticated } = auth;
   
   return {
     user,
     loading: isLoading,
-    isAuthenticated: Boolean(user),
+    isAuthenticated,
     userTier: user?.tier || 'anonymous'
   };
 }

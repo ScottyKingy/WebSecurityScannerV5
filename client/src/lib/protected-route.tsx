@@ -9,7 +9,8 @@ export function ProtectedRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
+  const isAuthenticated = !!user;
 
   return (
     <Route path={path}>
@@ -33,7 +34,8 @@ export function AdminRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const isAuthenticated = !!user;
   const isAdmin = user?.role === "admin";
 
   return (

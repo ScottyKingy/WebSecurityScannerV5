@@ -6,7 +6,8 @@ import RegisterForm from "@/components/auth/RegisterForm";
 import { useEffect, useState } from "react";
 
 export default function AuthPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
+  const isAuthenticated = !!user;
   const [activeTab, setActiveTab] = useState<string>("login");
 
   // Redirect if already authenticated

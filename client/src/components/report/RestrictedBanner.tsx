@@ -9,7 +9,7 @@ export function RestrictedBanner() {
   const [, navigate] = useLocation();
   
   return (
-    <Alert variant="warning" className="mb-6 bg-amber-50 text-amber-900 border-amber-200">
+    <Alert className="mb-6 bg-amber-50 text-amber-900 border-amber-200">
       <AlertTriangle className="h-5 w-5 text-amber-600" />
       <AlertTitle className="text-amber-800 font-semibold flex items-center gap-2">
         Preview Mode
