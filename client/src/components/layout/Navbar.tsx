@@ -58,33 +58,35 @@ export default function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/dashboard">
-                <span className="text-primary font-bold text-2xl cursor-pointer">
-                  WebScanner<span className="text-gray-500 text-sm align-super">v4</span>
-                </span>
+              <Link href="/dashboard" className="text-primary font-bold text-2xl cursor-pointer">
+                WebScanner<span className="text-gray-500 text-sm align-super">v4</span>
               </Link>
             </div>
             <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link href="/dashboard">
-                <a className={`${isActive('/dashboard') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Dashboard
-                </a>
+              <Link 
+                href="/dashboard" 
+                className={`${isActive('/dashboard') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+              >
+                Dashboard
               </Link>
-              <Link href="/scans">
-                <a className={`${isActive('/scans') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  Scans
-                </a>
+              <Link 
+                href="/scans" 
+                className={`${isActive('/scans') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+              >
+                Scans
               </Link>
-              <Link href="/scan-wizard">
-                <a className={`${isActive('/scan-wizard') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                  New Scan
-                </a>
+              <Link 
+                href="/scan-wizard" 
+                className={`${isActive('/scan-wizard') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+              >
+                New Scan
               </Link>
               {user?.role === 'admin' && (
-                <Link href="/admin">
-                  <a className={`${isActive('/admin') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}>
-                    Admin
-                  </a>
+                <Link 
+                  href="/admin" 
+                  className={`${isActive('/admin') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                >
+                  Admin
                 </Link>
               )}
             </nav>
