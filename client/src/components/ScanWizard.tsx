@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -41,9 +41,19 @@ const scanFormSchema = z.object({
 
 type ScanFormValues = z.infer<typeof scanFormSchema>;
 
+// Credit balance type
+type CreditBalance = {
+  userId: string;
+  currentBalance: number;
+  monthlyAllotment: number;
+  rolloverEnabled: boolean;
+  rolloverExpiry: string | null;
+  updatedAt: string;
+};
+
 // Custom hook to get credit balance
 function useCreditBalance() {
-  return useQuery({
+  return useQuery<CreditBalance>({
     queryKey: ['/api/credits/balance'],
     staleTime: 30000, // 30 seconds
   });
@@ -58,7 +68,12 @@ function useUserTier() {
 export default function ScanWizard() {
   const [competitors, setCompetitors] = useState<string[]>([]);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
+  
+  // Get URL parameter if provided
+  const params = new URLSearchParams(window.location.search);
+  const urlParam = params.get('url') ? decodeURIComponent(params.get('url') || '') : '';
+  const retryParam = params.get('retry') ? decodeURIComponent(params.get('retry') || '') : '';
   
   // Get user info
   const { user } = useAuth();
@@ -90,6 +105,20 @@ export default function ScanWizard() {
     },
   });
   
+  // Handle URL parameters on load
+  useEffect(() => {
+    // If URL or retry parameter is present, set it as the target URL
+    if (urlParam || retryParam) {
+      form.setValue('targetUrl', urlParam || retryParam);
+    } else {
+      // Try to get last scan from localStorage
+      const lastScan = localStorage.getItem('lastScanTarget');
+      if (lastScan) {
+        form.setValue('targetUrl', lastScan);
+      }
+    }
+  }, [form, urlParam, retryParam]);
+
   // Update competitors in form when array changes
   useEffect(() => {
     form.setValue('competitors', competitors);
@@ -106,6 +135,15 @@ export default function ScanWizard() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Save last scan target to localStorage
+      try {
+        if (form.getValues('targetUrl')) {
+          localStorage.setItem('lastScanTarget', form.getValues('targetUrl'));
+        }
+      } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+      }
+
       toast({
         title: 'Scan Started',
         description: `Scan queued successfully. ${data.creditsCharged} credits were charged.`,

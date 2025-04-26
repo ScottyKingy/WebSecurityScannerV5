@@ -1,0 +1,94 @@
+### 🧱 Feature ID 4: Scan-01 – Scan Wizard Setup (with `url` querystring)
+
+---
+
+### ✅ Prompt 4.1 — `/scan-details` Page With `url` Query Support (React + TypeScript)
+
+Create:
+- `/client/pages/scan-details.tsx`
+- `/client/components/ScanWizard.tsx`
+
+Requirements:
+- Use React + TypeScript + Shadcn UI
+- Use `useSearchParams()` or `URLSearchParams` from `next/router` or `react-router-dom`
+- Auto-fill the primary domain input if `url` is passed
+- Redirect to `/scan-centre` if missing or invalid URL
+
+Example:
+```ts
+const router = useRouter();
+const params = new URLSearchParams(window.location.search);
+const url = decodeURIComponent(params.get("url") || "");
+```
+
+---
+
+### ✅ Prompt 4.2 — ScanWizard Component UI & Logic
+
+Component: `/client/components/ScanWizard.tsx`
+
+Form Fields:
+- `Target URL` (required) — pre-filled from querystring if available
+- `Competitor URLs` (multi-input, max 5)
+- `Scan Scope Summary` — shows tier + credit estimate
+- `Start Scan Button` — enabled only if valid input + sufficient credits
+
+Hooks Required:
+- `useUserTier()` — to lock out competitors if `Lite` or `Deep`
+- `useCreditBalance()` — to show current credit availability
+- `useScanEstimate()` — local helper to compute total cost
+
+Tier Restrictions:
+- Only `Ultimate` and `Enterprise` can scan competitors
+- Lite/Deep → disable field, show lock icon + CTA: “Upgrade to unlock competitor analysis”
+
+Credit Logic:
+- Total scan cost = 1 (target) + number of competitors
+- Compare against available balance before submission
+
+UX:
+- Credit meter ("42 / 50 credits")
+- Tier badge with info tooltip ("Your plan: Deep AI Scanner")
+- CTA to `/scan-centre/account/credits` if balance insufficient
+
+---
+
+### ✅ Prompt 4.3 — Form Submission Logic (Frontend)
+
+On submit:
+1. Validate input
+2. Call `POST /api/scan/start` with `{ targetUrl, competitors }`
+3. If success → redirect to `/scan-details?url=<encoded target>`
+4. If 403 → toast: `Insufficient credits`
+5. If 500 → toast: `Scan queue failed. Please retry.`
+
+Use toast system for feedback. Disable the button during API request.
+
+---
+
+### ✅ Prompt 4.4 — Entry CTA on Homepage
+
+Update `/client/pages/index.tsx`:
+- Add domain input field + "Start Free AI Scan" button
+- On submit:
+```ts
+router.push(`/scan-details?url=${encodeURIComponent(domain)}`);
+```
+
+Validation:
+- Must include `http` or `https`
+- Must contain `.`
+- Tooltip on invalid: "Please enter a full domain URL (e.g., https://example.com)"
+
+Optional:
+- Suggest domain to scan with example placeholder
+- Track CTA usage via analytics or event log
+
+---
+
+### ✅ Additional Dev Notes
+- Persist last scan target to `localStorage` (optional)
+- Disable scan button if loading
+- Track domain submission attempt via `/api/telemetry/log`
+- Add skeleton loading state if routing to `/scan-details?url=...` is slow
+- Future: Add "Scan Preset Configs" dropdown for power users
