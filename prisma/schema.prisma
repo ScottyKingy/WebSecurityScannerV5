@@ -1,0 +1,49 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  role          String   @default("user") // admin | user
+  tier          String   @default("lite") // anonymous | lite | deep | ultimate | enterprise
+  createdAt     DateTime @default(now())
+  lastLogin     DateTime?
+  isVerified    Boolean  @default(false)
+  creditsBalance CreditsBalance?
+  creditsTransactions CreditsTransaction[]
+  refreshTokens RefreshToken[]
+}
+
+model CreditsBalance {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  amount    Int      @default(0)
+  updatedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CreditsTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Int
+  description String
+  balanceAfter Int
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
