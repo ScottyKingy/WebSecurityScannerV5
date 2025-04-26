@@ -1,0 +1,138 @@
+### 🧱 Feature ID 12: Stripe Credit Purchase Flow (Express.js + React)
+
+---
+
+### 🎯 Purpose
+Allow users to purchase credit packs using Stripe Checkout. 
+Handle successful payments via webhook, auto-update credit balance, and provide real-time UI feedback.
+
+---
+
+### ✅ Prompt 12.1 — Stripe Checkout Session (Backend)
+
+Create:
+- `/server/routes/credits.ts`
+
+Endpoint:
+```ts
+POST /api/credits/checkout-session
+```
+
+Input:
+```json
+{
+  "creditPack": "small" // small | medium | large | custom
+}
+```
+
+Steps:
+1. Require authentication middleware
+2. Define credit packs:
+```ts
+const creditPacks = {
+  small: { credits: 50, priceCents: 4999 },
+  medium: { credits: 120, priceCents: 9999 },
+  large: { credits: 300, priceCents: 19999 }
+};
+```
+3. Create a Stripe Checkout session:
+```ts
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ["card"],
+  mode: "payment",
+  line_items: [{
+    quantity: 1,
+    price_data: {
+      currency: "usd",
+      unit_amount: creditPacks[creditPack].priceCents,
+      product_data: { name: `${creditPack} Credit Pack` }
+    }
+  }],
+  metadata: {
+    userId: req.user.id,
+    credits: creditPacks[creditPack].credits
+  },
+  success_url: `${process.env.APP_URL}/scan-centre/account/credits?success=1`,
+  cancel_url: `${process.env.APP_URL}/scan-centre/account/credits?canceled=1`
+});
+```
+4. Return `{ sessionId }` to frontend
+
+Security:
+- Validate requested pack exists
+- Enforce authentication
+- Log session creation with userId and creditPack
+
+---
+
+### ✅ Prompt 12.2 — Stripe Webhook Handler (Backend)
+
+Create:
+- `/server/routes/webhooks.ts`
+
+Endpoint:
+```ts
+POST /api/webhooks/stripe
+```
+
+Steps:
+1. Parse webhook payload and verify Stripe signature
+2. Handle `checkout.session.completed` events
+3. Extract `userId` and `credits` from session.metadata
+4. Call `grantCredits(userId, credits, "purchase")`
+5. Log the successful credit top-up
+
+Example:
+```ts
+if (event.type === "checkout.session.completed") {
+  const session = event.data.object;
+  await grantCredits(session.metadata.userId, parseInt(session.metadata.credits), "purchase");
+}
+```
+
+Security:
+- Verify webhook secret from Stripe
+- Log any payment failures separately
+- Retry webhook delivery if fails (Stripe retries automatically)
+
+---
+
+### ✅ Prompt 12.3 — Frontend: Purchase Credits UI
+
+Page: `/client/pages/scan-centre/account/credits.tsx`
+
+Features:
+- Show credit balance (use `/api/credits/balance`)
+- List available packs (Small, Medium, Large)
+- CTA button: "Buy Credits"
+- On click:
+  - Call `POST /api/credits/checkout-session`
+  - Redirect to Stripe Checkout using returned `sessionId`
+
+UX:
+- Show loading spinner during checkout session creation
+- After purchase:
+  - Success: Show "Credits Added Successfully" banner
+  - Canceled: Show "Purchase Canceled" banner
+
+Optional:
+- Track user purchases with telemetry event: `credit.purchase.started`, `credit.purchase.completed`
+
+---
+
+### ✅ Prompt 12.4 — Auto-Top-Up (Future)
+
+Prepare database to support:
+- Auto-purchase a selected pack if credits < threshold
+- Hook into recurring card-on-file charges
+
+Initial version:
+- Manual purchase only
+- Auto-top-up toggle stored in user profile (future)
+
+---
+
+### 🧠 Dev Notes
+- Always store Stripe event IDs for audits
+- Consider emitting webhook events into an event queue for durability
+- Update frontend credit balance automatically after returning from checkout
