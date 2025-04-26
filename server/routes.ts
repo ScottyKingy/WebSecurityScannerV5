@@ -5,6 +5,7 @@ import creditsRoutes from './routes/credits';
 import scanRoutes from './routes/scan';
 import scanStatusRoutes from './routes/scanStatus';
 import scannersRoutes from './routes/scanners';
+import adminRoutes from './routes/admin';
 import { ensureTablesExist } from './db';
 import { db } from './db';
 import { users } from '@shared/schema';
@@ -23,29 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/scanners', scannersRoutes);
   
   // Admin routes
-  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
-    try {
-      const allUsers = await db.query.users.findMany({
-        orderBy: (users, { desc }) => [desc(users.createdAt)]
-      });
-
-      // Remove sensitive information
-      const sanitizedUsers = allUsers.map(user => ({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        tier: user.tier,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        isVerified: user.isVerified
-      }));
-
-      return res.status(200).json(sanitizedUsers);
-    } catch (error) {
-      console.error('Get all users error:', error);
-      return res.status(500).json({ error: "Failed to get users" });
-    }
-  });
+  app.use('/api/admin', adminRoutes);
 
   const httpServer = createServer(app);
 

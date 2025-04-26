@@ -1,0 +1,171 @@
+### 🧱 Feature ID 13: Admin Section – User, Role, and Credit Management Dashboard (Express.js + React)
+
+---
+
+### 🎯 Purpose
+Create a secured Admin UI section and API layer for:
+- Managing users (roles, tiers)
+- Granting or deducting credits
+- Viewing audit logs and transaction history
+
+Accessible only to Admins (`role: "admin"`).
+
+---
+
+### ✅ Prompt 13.1 — Admin Backend API Endpoints
+
+Create or update:
+- `/server/routes/admin.ts`
+
+Endpoints:
+
+- `GET /api/admin/users`
+```ts
+// List all users with ID, email, role, tier, createdAt
+// Paginated + optional search
+requireAuth + requireAdmin
+```
+
+- `PATCH /api/admin/users/:userId`
+```ts
+// Update user role and tier
+// Input: { role: "admin" | "user", tier: "lite" | "deep" | "ultimate" | "enterprise" }
+requireAuth + requireAdmin
+```
+
+- `POST /api/admin/credits/grant`
+```ts
+// Grant or deduct credits manually
+// Input: { userId, amount, reason }
+// Negative amount allowed (deduction)
+requireAuth + requireAdmin
+```
+
+- `GET /api/admin/transactions`
+```ts
+// List all credit transactions across platform
+// Optional filters: userId, type, date range
+requireAuth + requireAdmin
+```
+
+Security:
+- Validate input payloads carefully
+- Log admin actions to audit logs (table `audit_logs`)
+
+---
+
+### ✅ Prompt 13.2 — Admin Frontend Dashboard
+
+Create:
+- `/client/pages/admin/index.tsx`
+
+Features:
+- Tabs or cards for sections:
+  - Users Management
+  - Credit Transactions
+  - Audit Logs (future)
+
+UX:
+- Responsive, clean admin UI
+- Filterable and sortable tables
+- Batch actions (e.g., grant credits to multiple users)
+
+Hooks:
+- `useAdminUsers()`
+- `useAdminTransactions()`
+
+Components:
+- `AdminUserTable.tsx`
+- `AdminCreditActionModal.tsx`
+
+---
+
+### ✅ Prompt 13.3 — AdminUserTable Component
+
+File: `/client/components/admin/AdminUserTable.tsx`
+```tsx
+export function AdminUserTable({ users }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Email</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Tier</TableHead>
+          <TableHead>Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map(u => (
+          <TableRow key={u.id}>
+            <TableCell>{u.email}</TableCell>
+            <TableCell>{u.role}</TableCell>
+            <TableCell>{u.tier}</TableCell>
+            <TableCell>
+              <Button size="sm" onClick={() => openEditUserModal(u)}>Edit</Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+```
+
+---
+
+### ✅ Prompt 13.4 — AdminCreditActionModal
+
+File: `/client/components/admin/AdminCreditActionModal.tsx`
+```tsx
+export function AdminCreditActionModal({ userId }) {
+  const [amount, setAmount] = useState(0);
+  const [reason, setReason] = useState('');
+
+  const submit = async () => {
+    await fetch(`/api/admin/credits/grant`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, amount, reason })
+    });
+    closeModal();
+    refreshUserList();
+  };
+
+  return (
+    <Modal>
+      <Input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value))} />
+      <Textarea value={reason} onChange={e => setReason(e.target.value)} />
+      <Button onClick={submit}>Confirm</Button>
+    </Modal>
+  );
+}
+```
+
+---
+
+### ✅ Prompt 13.5 — Audit Logs (Future)
+
+Prepare `/prisma/schema.prisma`:
+```prisma
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+}
+```
+
+Log events like:
+- Credit grants or deductions
+- Role/tier changes
+- Admin login events
+
+---
+
+### 🧠 Dev Notes
+- Restrict Admin UI to users with `role === 'admin'`
+- Make admin dashboards lazy-loadable modules
+- Future: Add search, bulk edit, impersonation features
+- Track Admin action telemetry: `admin.user.promoted`, `admin.credits.granted`
