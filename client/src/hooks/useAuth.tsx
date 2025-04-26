@@ -79,11 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return await res.json();
     },
-    onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data) => {
+      // Store the token in local storage
+      if (data.accessToken) {
+        setAuthToken(data.accessToken);
+      }
+      
+      // Store user data in the query cache
+      queryClient.setQueryData(["/api/user"], data.user);
+      
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.email}!`,
+        description: `Welcome back, ${data.user.email}!`,
       });
     },
     onError: (error: Error) => {
