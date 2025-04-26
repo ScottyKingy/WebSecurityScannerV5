@@ -45,7 +45,9 @@ router.post('/register', async (req, res) => {
     // Create credits balance
     await db.insert(creditsBalances).values({
       userId: newUser.id,
-      amount: 100 // Default starting credits
+      currentBalance: 100, // Default starting credits
+      monthlyAllotment: 50, // Default monthly credits
+      rolloverEnabled: validatedData.tier === 'deep' || validatedData.tier === 'ultimate' || validatedData.tier === 'enterprise'
     });
 
     // Generate tokens
@@ -183,7 +185,10 @@ router.get('/me', requireAuth, async (req, res) => {
       lastLogin: user.lastLogin,
       isVerified: user.isVerified,
       creditsBalance: creditsBalance ? {
-        amount: creditsBalance.amount,
+        currentBalance: creditsBalance.currentBalance,
+        monthlyAllotment: creditsBalance.monthlyAllotment,
+        rolloverEnabled: creditsBalance.rolloverEnabled,
+        rolloverExpiry: creditsBalance.rolloverExpiry,
         updatedAt: creditsBalance.updatedAt
       } : null
     });
